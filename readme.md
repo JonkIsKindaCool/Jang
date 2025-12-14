@@ -22,20 +22,6 @@ let result = num + 8;
 IO.println(result);
 ```
 
-## Built-in Types
-
-### `String`
-- Create: `let s = new String("hello");`
-- Methods: `value`, `split(delimiter)`, `lenght` (property)
-
-### `Int`
-- Create: `let n = new Int(123);`
-- Methods: `value`, `toBool` (placeholder)
-
-### `IO`
-- Static methods: `print(...)`, `println(...)`
-- Outputs to console (JS) or terminal (native).
-
 ## Language Constructs
 
 - **Variables**: `let` (mutable) and `const` (immutable)
