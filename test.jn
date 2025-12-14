@@ -1,4 +1,0 @@
-let integer: any = new Int("3424").value;
-integer = "Aea"
-
-IO.println(integer)

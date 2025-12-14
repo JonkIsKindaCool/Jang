@@ -99,6 +99,7 @@ class Parser {
 				while (!peak().equals(RPAREN)) {
 					var name:String = getIdent();
 					var type:Type = TAny;
+
 					if (peak().equals(COLON)) {
 						advance();
 						type = getType();
@@ -323,6 +324,7 @@ class Parser {
 			case 'float': TFloat;
 			case 'boolean': TBool;
 			case 'any': TAny;
+			case 'callable': TFunction;
 			default: TCustom(type);
 		}
 	}

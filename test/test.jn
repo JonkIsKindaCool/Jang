@@ -1,0 +1,6 @@
+fn sum(a: int, b: int): String{
+    return new String(a + b);
+}
+
+let f: callable = sum
+f(3, 2).value

@@ -1,0 +1,11 @@
+{
+  "name": "jang",
+  "url" : "https://github.com/JonkIsKindaCool/Jang",
+  "license": "MIT",
+  "tags": ["cross"],
+  "description": "A experimental scripting engine made in haxe.",
+  "version": "1.0.0",
+  "classPath": "src/",
+  "releasenote": "Initial release, everything is working correctly.",
+  "contributors": ["JonkIsKindaCool"]
+}

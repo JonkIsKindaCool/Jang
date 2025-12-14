@@ -61,8 +61,9 @@ class Scope {
 	}
 
 	public static function checkType(v:JangValue, t:Type) {
-		if (t.equals(TAny)) return true;
-		
+		if (t.equals(TAny))
+			return true;
+
 		switch (v) {
 			case VString(_):
 				return t.equals(TString);
@@ -79,6 +80,10 @@ class Scope {
 						return true;
 				}
 				return false;
+			case VFunction(f):
+				return t.equals(TFunction);
+			case VHaxeFunction(f):
+				return t.equals(TFunction);
 			default:
 				return false;
 		}

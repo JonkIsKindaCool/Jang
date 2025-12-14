@@ -123,7 +123,7 @@ class Printer {
 		}
 	}
 
-	public static inline function println(content:Rest<Dynamic>) {
+	public static function println(content:Rest<Dynamic>) {
 		#if js
 		js.Syntax.code("console.log({0})", content.toArray().join(", "));
 		#else

@@ -49,7 +49,6 @@ IO.println(result);
 ## Example Execution Flow
 
 ```haxe
-// In Main.hx (example)
 var code = 'IO.println("Hello from Jang!");';
 var tokens = Lexer.tokenize(code);
 var ast = new Parser().parse(tokens);
@@ -66,7 +65,6 @@ To add a new built-in type:
 
 Example:
 ```haxe
-// In Interpreter.hx
 GLOBALS["MyType"] = {
     constant: true,
     value: VClass(new MyClass()),

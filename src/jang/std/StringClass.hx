@@ -25,7 +25,7 @@ class StringClass extends JangClass<StringInstance> {
 				c.toString();
 			case VInstance(i):
 				i.name;
-			case VFunction(expr, args):
+			case VFunction(f):
 				'function';
 			case VHaxeFunction(f):
 				'native function';

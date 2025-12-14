@@ -1,3 +1,4 @@
+import jang.structures.Token;
 import jang.runtime.Interpreter;
 import jang.structures.Expr;
 import haxe.Resource;
@@ -12,12 +13,13 @@ function main() {
 	var t0:Float = Timer.stamp();
 
 	Printer.println('\n==== TOKENS ====');
-	Printer.printTokens(Lexer.tokenize(input));
+	var tokens:Array<Token> = Lexer.tokenize(input);
+	Printer.printTokens(tokens);
 	Printer.println('==== TOKENS ====');
 
 	Printer.println('\n==== AST ====');
 
-	var ast:Expr = new Parser().parse(Lexer.tokenize(input));
+	var ast:Expr = new Parser().parse(tokens);
 
 	Printer.printExpr(ast);
 	Printer.println('==== AST ====');

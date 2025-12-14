@@ -1,5 +1,6 @@
 package jang.runtime;
 
+import jang.structures.JangFunction;
 import jang.std.StringClass;
 import jang.std.IntClass;
 import jang.std.IO;
@@ -18,7 +19,7 @@ class Interpreter {
 			var lv:Dynamic = unwrapAny(l);
 			var rv:Dynamic = unwrapAny(r);
 			var isString:Bool = (Std.isOfType(lv, String) || Std.isOfType(rv, String));
-			var isFloat:Bool = (!isString && (Std.isOfType(lv, Float) || Std.isOfType(rv, Float)));
+			var isFloat:Bool = (!isString && (lv != Std.int(lv) || rv != Std.int(rv)));
 			if (isString)
 				return VString((lv : String) + (rv : String));
 			var result:Float = (lv : Float) + (rv : Float);
@@ -171,6 +172,20 @@ class Interpreter {
 					}
 				}
 				return OPERATORS.get(op)(executeExpr(left, scope), executeExpr(right, scope));
+			case Function(expr, args, type, name):
+				var func:JangFunction = {
+					body: expr,
+					args: args,
+					closure: scope,
+					type: type
+				};
+
+				var value:JangValue = VFunction(func);
+
+				if (name != null)
+					scope.define(name, value, false, TFunction);
+
+				return value;
 			case Identifier(name):
 				return scope.get(name);
 			case Assignment(name, right, isConstant, type):
@@ -183,6 +198,46 @@ class Interpreter {
 				switch (v) {
 					case VHaxeFunction(f):
 						return f(args);
+					case VFunction(f):
+						var local:Scope = new Scope(f.closure);
+						var body:Array<Expr> = f.body;
+						var type:Type = f.type;
+						var arguments:Array<Argument> = f.args;
+
+						if (args.length < arguments.length)
+							throw 'Missing arguments';
+						else if (args.length > arguments.length)
+							throw 'idk';
+
+						for (i => arg in arguments) {
+							var val:JangValue = args[i];
+
+							if (Scope.checkType(val, arg.type)) {
+								local.define(arg.name, val, false, arg.type);
+							} else {
+								throw 'Expected $type, not ${val.getName()}';
+							}
+						}
+
+						for (expr in body) {
+							try {
+								executeExpr(expr, local);
+							} catch (e:Ender) {
+								switch (e) {
+									case Return(e):
+										var value:JangValue = executeExpr(e, local);
+										if (Scope.checkType(value, type)) {
+											return value;
+										} else {
+											throw 'Expected $type, not ${value.getName()}';
+										}
+									default:
+										throw 'Unexpected ender $e';
+								}
+							}
+						}
+
+						return VNull;
 					default:
 						throw 'You can only call functions';
 				}
@@ -234,7 +289,7 @@ class Interpreter {
 			case VNull: null;
 			case VInstance(i): i;
 			case VClass(c): c;
-			case VFunction(expr, args): null;
+			case VFunction(f): f;
 			case VHaxeFunction(f): f;
 		}
 	}
@@ -248,6 +303,6 @@ enum JangValue {
 	VNull;
 	VClass(c:JangClass<Dynamic>);
 	VInstance(i:JangInstance);
-	VFunction(expr:Expr, args:Array<String>);
+	VFunction(f:JangFunction);
 	VHaxeFunction(f:(args:Array<JangValue>) -> JangValue);
 }

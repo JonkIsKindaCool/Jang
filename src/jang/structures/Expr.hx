@@ -33,6 +33,7 @@ typedef Argument = {
 enum Type {
     TInt;
     TFloat;
+    TFunction;
     TBool;
     TAny;
     TString;

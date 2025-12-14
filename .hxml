@@ -1,5 +1,6 @@
+--cwd test
+--library jang
 --class-path src
 --resource test.jn
 --main Main
---js bin/main.js
---cmd deno bin/main.js
+--run Main
