@@ -1,6 +1,7 @@
 import jang.runtime.Interpreter;
 import jang.structures.Expr;
 import haxe.Resource;
+import haxe.Timer;
 import jang.Parser;
 import jang.utils.Printer;
 import jang.Lexer;
@@ -8,25 +9,25 @@ import jang.Lexer;
 function main() {
 	var input = Resource.getString("test.jn");
 
-	var t0:Float = Sys.time();
+	var t0:Float = Timer.stamp();
 
-	Sys.println('\n==== TOKENS ====');
+	Printer.println('\n==== TOKENS ====');
 	Printer.printTokens(Lexer.tokenize(input));
-	Sys.println('==== TOKENS ====');
+	Printer.println('==== TOKENS ====');
 
-	Sys.println('\n==== AST ====');
+	Printer.println('\n==== AST ====');
 
 	var ast:Expr = new Parser().parse(Lexer.tokenize(input));
 
 	Printer.printExpr(ast);
-	Sys.println('==== AST ====');
+	Printer.println('==== AST ====');
 
-	Sys.println('\n==== RUNTIME ====');
+	Printer.println('\n==== RUNTIME ====');
 
 	var result:JangValue = new Interpreter().execute(ast);
 
-	Sys.println('Result: $result');
-	Sys.println('==== RUNTIME ====');
+	Printer.println('Result: $result');
+	Printer.println('==== RUNTIME ====');
 
-	Sys.println('Execution Time: ${(Sys.time() - t0) * 1000.0} ms');
+	Printer.println('Execution Time: ${(Timer.stamp() - t0) * 1000.0} ms');
 }

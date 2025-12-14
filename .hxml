@@ -1,3 +1,5 @@
 --class-path src
 --resource test.jn
---run Main
+--main Main
+--js bin/main.js
+--cmd deno bin/main.js
