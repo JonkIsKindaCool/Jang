@@ -7,120 +7,108 @@ import jang.structures.Token;
 using StringTools;
 
 class Printer {
-	public static function printTokens(tokens:Array<Token>) {
+	public static function printTokens(tokens:Array<TokenInfo>) {
 		for (token in tokens) {
 			Printer.println(token);
 		}
 	}
 
-	public static function printExpr(expr:Expr, ?spaces:Int = 0) {
-		switch (expr) {
-			case New(e, args):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Function(');
-
-				Printer.println('${[for (i in 0...spaces + 4) " "].join("")}Instance: $e');
-				if (args.length > 0) {
-					Printer.println('${[for (i in 0...spaces + 4) " "].join("")}Argument:');
-					for (arg in args) {
-						printExpr(arg, spaces + 8);
-					}
-				}
-
-				Printer.println('${[for (i in 0...spaces) " "].join("")})');
-			case Function(b, args, type, name):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Function(');
-
-				Printer.println('${[for (i in 0...spaces + 4) " "].join("")}Name: $name');
-				Printer.println('${[for (i in 0...spaces + 4) " "].join("")}Type: $type');
-
-				if (b.length > 0) {
-					Printer.println('${[for (i in 0...spaces + 4) " "].join("")}Body:');
-					for (expr in b) {
-						printExpr(expr, spaces + 8);
-					}
-				}
-
-				if (args.length > 0) {
-					Printer.println('${[for (i in 0...spaces + 4) " "].join("")}Argument:');
-					for (arg in args) {
-						Printer.println('${[for (i in 0...spaces + 8) " "].join("")}Name: ${arg.name} | Type: ${arg.type}');
-					}
-				}
-				Printer.println('${[for (i in 0...spaces) " "].join("")})');
-
-			case While(c, b):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}While(');
-				Printer.println('${[for (i in 0...spaces + 4) " "].join("")}Condition:');
-
-				printExpr(c, spaces + 8);
-
-				if (b.length > 0) {
-					Printer.println('${[for (i in 0...spaces + 4) " "].join("")}Body:');
-					for (expr in b) {
-						printExpr(expr, spaces + 8);
-					}
-				}
-
-				Printer.println('${[for (i in 0...spaces) " "].join("")})');
-			case Ender(e):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Ender($e)');
-			case Import(p):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Import(${p.join(".")})');
+	public static function printExpr(e:ExprInfo, ?spaces:Int = 0) {
+		printWithSpaces('{', spaces);
+		switch (e.expr) {
 			case NumberLiteral(value):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Number($value)');
+				printWithSpaces('Type: Number Literal', spaces + 4);
+				printWithSpaces('Value: $value', spaces + 4);
 			case BooleanLiteral(value):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Boolean($value)');
+				printWithSpaces('Type: Boolean Literal', spaces + 4);
+				printWithSpaces('Value: $value', spaces + 4);
 			case NullLiteral:
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Null');
+				printWithSpaces('Type: Null Literal', spaces + 4);
 			case Identifier(name):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Identifier($name)');
-			case Call(f, args):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Call(');
-				printExpr(f, spaces + 4);
-				if (args.length > 0) {
-					Printer.println('${[for (i in 0...spaces + 4) " "].join("")}Arguments: ');
-					for (expr in args) {
-						printExpr(expr, spaces + 8);
-					}
-				}
-				Printer.println('${[for (i in 0...spaces) " "].join("")})');
-			case Top(e):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Top(');
-				printExpr(e, spaces + 4);
-				Printer.println('${[for (i in 0...spaces) " "].join("")})');
-			case Field(p, f):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}FieldAccess(');
-				printExpr(p, spaces + 4);
-				Printer.println('${[for (i in 0...spaces + 4) " "].join("")}Field: $f');
-				Printer.println('${[for (i in 0...spaces) " "].join("")})');
+				printWithSpaces('Type: Identifier', spaces + 4);
+				printWithSpaces('Name: $name', spaces + 4);
 			case Block(statements):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Block(');
-				for (statement in statements) {
-					printExpr(statement, spaces + 4);
-				}
-				Printer.println('${[for (i in 0...spaces) " "].join("")})');
+				for (expr in statements)
+					printExpr(expr, spaces + 4);
 			case BinaryOp(left, op, right):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}BinaryOp(');
-
-				printExpr(left, spaces + 4);
-
-				Printer.println('${[for (i in 0...spaces + 4) " "].join("")}$op');
-
-				printExpr(right, spaces + 4);
-
-				Printer.println('${[for (i in 0...spaces) " "].join("")})');
-			case Assignment(name, right, isConstant, t):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}Assignment(');
-				Printer.println('${[for (i in 0...spaces + 4) " "].join("")}Value name: $name');
-
-				printExpr(right, spaces + 4);
-				Printer.println('${[for (i in 0...spaces + 4) " "].join("")}isConstant: $isConstant');
-				Printer.println('${[for (i in 0...spaces + 4) " "].join("")}type: $t');
-
-				Printer.println('${[for (i in 0...spaces) " "].join("")})');
+				printWithSpaces('Type: BinaryOp', spaces + 4);
+				printWithSpaces('Operator: $op', spaces + 4);
+				printWithSpaces('Left: ', spaces + 4);
+				printExpr(left, spaces + 8);
+				printWithSpaces('Right: ', spaces + 4);
+				printExpr(right, spaces + 8);
+			case Assignment(name, right, isConstant, type):
+				printWithSpaces('Type: Assignment', spaces + 4);
+				printWithSpaces('name: $name', spaces + 4);
+				printWithSpaces('isConstant: $isConstant', spaces + 4);
+				printWithSpaces('type: ${type.getName()}', spaces + 4);
+				printWithSpaces('Value: ', spaces + 4);
+				printExpr(right, spaces + 8);
 			case StringLiteral(value):
-				Printer.println('${[for (i in 0...spaces) " "].join("")}String($value)');
+				printWithSpaces('Type: String Literal', spaces + 4);
+				printWithSpaces('Value: $value', spaces + 4);
+			case Field(p, f):
+				printWithSpaces('Type: Field Access', spaces + 4);
+				printWithSpaces('Parent:', spaces + 4);
+				printExpr(p, spaces + 8);
+				printWithSpaces('Field: $f', spaces + 4);
+			case Call(f, args):
+				printWithSpaces('Type: Function Call', spaces + 4);
+				printWithSpaces('Function:', spaces + 4);
+				printExpr(f, spaces + 8);
+				printWithSpaces('Arguments:', spaces + 4);
+				for (arg in args) {
+					printExpr(arg, spaces + 8);
+				}
+			case Top(e):
+				printExpr(e, spaces);
+			case While(c, b):
+				printWithSpaces('Type: While Loop', spaces + 4);
+				printWithSpaces('Condition:', spaces + 4);
+				printExpr(c, spaces + 8);
+				printWithSpaces('Body:', spaces + 4);
+				for (expr in b) {
+					printExpr(expr, spaces + 8);
+				}
+			case New(e, args):
+				printWithSpaces('Type: New', spaces + 4);
+				printWithSpaces('Class: $e', spaces + 4);
+				printWithSpaces('Arguments:', spaces + 4);
+				for (arg in args) {
+					printExpr(arg, spaces + 8);
+				}
+			case Import(p):
+				printWithSpaces('Type: Import', spaces + 4);
+				printWithSpaces('Path: ${p.join(".")}', spaces + 4);
+			case Ender(e):
+				switch (e) {
+					case Return(e):
+						printWithSpaces('Type: Return', spaces + 4);
+						printWithSpaces('Expression:', spaces + 4);
+						printExpr(e, spaces + 8);
+					case Break:
+						printWithSpaces('Type: Break', spaces + 4);
+					case Continue:
+						printWithSpaces('Type: Continue', spaces + 4);
+				}
+			case Function(expr, args, type, name):
+			case If(cond, body, elsE):
+				printWithSpaces('Type: If Statement', spaces + 4);
+				printWithSpaces('Condition:', spaces + 4);
+				printExpr(cond, spaces + 8);
+				printWithSpaces('Body:', spaces + 4);
+				printExpr(body, spaces + 8);
+
+				if (elsE != null) {
+					printWithSpaces('Else Statement:', spaces + 4);
+					printExpr(elsE, spaces + 8);
+				}
 		}
+		printWithSpaces('}', spaces);
+	}
+
+	private static function printWithSpaces(msg:String, spaces:Int) {
+		println('${[for (i in 0...spaces) " "].join("")}$msg');
 	}
 
 	public static function println(content:Rest<Dynamic>) {

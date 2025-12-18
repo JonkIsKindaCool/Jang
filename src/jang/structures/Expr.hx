@@ -5,22 +5,30 @@ enum Expr {
     BooleanLiteral(value:Bool); 
     NullLiteral;
     Identifier(name:String);
-    Block(statements:Array<Expr>);
-    BinaryOp(left:Expr, op:String, right:Expr);
-    Assignment(name:String, right:Expr, isConstant:Bool, type: Type);
+    Block(statements:Array<ExprInfo>);
+    BinaryOp(left:ExprInfo, op:String, right:ExprInfo);
+    Assignment(name:String, right:ExprInfo, isConstant:Bool, type: Type);
     StringLiteral(value:String);
-    Field(p:Expr, f:String);
-    Call(f:Expr, args:Array<Expr>);
-    Top(e:Expr);
-    While(c:Expr, b:Array<Expr>);
-    New(e:String, args:Array<Expr>);
+    Field(p:ExprInfo, f:String);
+    Call(f:ExprInfo, args:Array<ExprInfo>);
+    Top(e:ExprInfo);
+    While(c:ExprInfo, b:Array<ExprInfo>);
+    New(e:String, args:Array<ExprInfo>);
     Import(p:Array<String>);
     Ender(e:Ender);
-    Function(expr:Array<Expr>, args:Array<Argument>, type: Type, ?name:String);
+    Function(expr:Array<ExprInfo>, args:Array<Argument>, type: Type, ?name:String);
+    If(cond:ExprInfo, body:ExprInfo, ?elsE:ExprInfo);
+}
+
+typedef ExprInfo = {
+    posStart:Int, 
+    posEnd:Int,
+    line: Int,
+    expr:Expr
 }
 
 enum Ender {
-    Return(e:Expr);
+    Return(e:ExprInfo);
     Break;
     Continue;
 }

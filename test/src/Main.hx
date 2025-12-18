@@ -3,30 +3,25 @@ import jang.runtime.Interpreter;
 import jang.structures.Expr;
 import haxe.Resource;
 import haxe.Timer;
-import jang.Parser;
+import jang.runtime.*;
 import jang.utils.Printer;
-import jang.Lexer;
 
 function main() {
 	var input = Resource.getString("test.jn");
 
 	var t0:Float = Timer.stamp();
 
-	Printer.println('\n==== TOKENS ====');
-	var tokens:Array<Token> = Lexer.tokenize(input);
-	Printer.printTokens(tokens);
-	Printer.println('==== TOKENS ====');
-
 	Printer.println('\n==== AST ====');
 
-	var ast:Expr = new Parser().parse(tokens);
-
+	var ast:ExprInfo = new Parser().parseString(input);
 	Printer.printExpr(ast);
+
 	Printer.println('==== AST ====');
 
 	Printer.println('\n==== RUNTIME ====');
 
-	var result:JangValue = new Interpreter().execute(ast);
+	var interpreter:Interpreter = new Interpreter();
+	var result:JangValue = interpreter.execute(ast, input);
 
 	Printer.println('Result: $result');
 	Printer.println('==== RUNTIME ====');

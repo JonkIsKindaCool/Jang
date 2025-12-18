@@ -1,5 +1,12 @@
 package jang.structures;
 
+typedef TokenInfo = {
+    startPos: Int,
+    endPos:Int,
+    line: Int,
+    token: Token
+}
+
 enum Token {
     EOF;
     IDENTIFIER(name:String);

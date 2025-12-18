@@ -7,9 +7,11 @@ import haxe.ds.StringMap;
 class Scope {
 	public var variables:Map<String, JangVariable>;
 	public var parent:Scope;
+	public var interp:Interpreter;
 
-	public function new(parent:Scope = null) {
+	public function new(interp:Interpreter, parent:Scope = null) {
 		this.variables = [];
+		this.interp = interp;
 		this.parent = parent;
 	}
 
@@ -60,6 +62,19 @@ class Scope {
 		throw "Undefined variable: " + name;
 	}
 
+	public function callFunction(name:String, args:Array<JangValue>):JangValue {
+		var value:JangValue = get(name);
+
+		switch (value){
+			case VFunction(f):
+				return interp.callFunction(f, args);
+			case VHaxeFunction(f):
+				return f(args);
+			default:
+				throw 'Value is not callable';
+		}
+	}
+
 	public static function checkType(v:JangValue, t:Type) {
 		if (t.equals(TAny))
 			return true;
@@ -70,7 +85,7 @@ class Scope {
 			case VInt(i):
 				return t.equals(TInt);
 			case VFloat(f):
-				return t.equals(TFloat);
+				return t.equals(TFloat) || t.equals(TInt);
 			case VBoolean(b):
 				return t.equals(TBool);
 			case VInstance(i):

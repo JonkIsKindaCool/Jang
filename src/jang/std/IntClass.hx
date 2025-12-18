@@ -41,7 +41,9 @@ class IntInstance extends JangInstance {
 			case "value":
 				return VInt(value);
 			case "toBool":
-				return VNull;
+				return VHaxeFunction(_ -> {
+					VBoolean(value == 1);
+				});
 		}
 
 		return super.getVariable(name);

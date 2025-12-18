@@ -1,6 +1,9 @@
-fn sum(a: int, b: int): String{
-    return new String(a + b);
-}
+let aea = 0.4;
 
-let f: callable = sum
-f(3, 2).value
+if (aea < 0.3){
+    IO.println("lower");
+} elif (aea < 0.6){
+    IO.println("mid");
+} else {
+    IO.println("upper");
+}
