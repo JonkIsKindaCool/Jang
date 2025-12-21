@@ -11,10 +11,6 @@ import jang.std.primitives.ObjectClass;
 
 class TypeUtils {
 
-	/* =========================================================
-		JANG -> HAXE
-	   ========================================================= */
-
 	public static function jangToHaxe(v:JangValue):Dynamic {
 		return switch (v) {
 			case VString(s): s;
@@ -37,10 +33,6 @@ class TypeUtils {
 			case VHaxeFunction(f): f;
 		}
 	}
-
-	/* =========================================================
-		HAXE -> JANG
-	   ========================================================= */
 
 	public static function haxeToJang(v:Dynamic):JangValue {
 		if (v == null) return VNull;
@@ -68,10 +60,6 @@ class TypeUtils {
 		return VNull;
 	}
 
-	/* =========================================================
-		TYPE CHECKING
-	   ========================================================= */
-
 	public static function checkType(v:JangValue, t:Type):Bool {
 		if (t.equals(TAny)) return true;
 
@@ -91,10 +79,6 @@ class TypeUtils {
 				false;
 		}
 	}
-
-	/* =========================================================
-		EXPECT HELPERS (OBLIGATORIOS)
-	   ========================================================= */
 
 	public static function expectString(v:JangValue):String {
 		return switch (v) {
@@ -147,10 +131,6 @@ class TypeUtils {
 		}
 	}
 
-	/* =========================================================
-		TRUTHINESS (IF / WHILE / && / ||)
-	   ========================================================= */
-
 	public static function isTruthy(v:JangValue):Bool {
 		return switch (v) {
 			case VNull: false;
@@ -163,10 +143,6 @@ class TypeUtils {
 			default: true;
 		}
 	}
-
-	/* =========================================================
-		EQUALITY (==)
-	   ========================================================= */
 
 	public static function equals(a:JangValue, b:JangValue):Bool {
 		if (a.getIndex() != b.getIndex()) return false;
@@ -182,10 +158,6 @@ class TypeUtils {
 		}
 	}
 
-	/* =========================================================
-		BOXING / UNBOXING
-	   ========================================================= */
-
 	public static function primitiveToInstance(v:JangValue):JangInstance {
 		return switch (v) {
 			case VString(s): new StringInstance(s);
@@ -196,10 +168,6 @@ class TypeUtils {
 			default: null;
 		}
 	}
-
-	/* =========================================================
-		UTILIDADES
-	   ========================================================= */
 
 	public static function typeName(v:JangValue):String {
 		return switch (v) {

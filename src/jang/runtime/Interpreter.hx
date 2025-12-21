@@ -1,5 +1,7 @@
 package jang.runtime;
 
+import jang.std.others.Time;
+import jang.std.others.StringBuf.StringBuffer;
 import jang.std.system.Math;
 import jang.std.primitives.ObjectClass;
 import jang.utils.TypeUtils;
@@ -19,50 +21,41 @@ using StringTools;
 
 class Interpreter {
 	public static var OPERATORS:Map<String, (JangValue, JangValue) -> JangValue> = [
-		/* ===== ARITMÉTICOS ===== */
 		"+" => (l, r) -> {
 			var lv = TypeUtils.jangToHaxe(l);
 			var rv = TypeUtils.jangToHaxe(r);
-			// concatenación string
 			if (Std.isOfType(lv, String) || Std.isOfType(rv, String))
 				return VString(Std.string(lv) + Std.string(rv));
-			var a = unwrapNum(l, "Operator '+' expects numbers");
-			var b = unwrapNum(r, "Operator '+' expects numbers");
+			var a:Float = TypeUtils.expectFloat(l);
+			var b:Float = TypeUtils.expectFloat(r);
 			var res = a + b;
 			return (Math.floor(res) == res) ? VInt(Std.int(res)) : VFloat(res);
 		},
 		"-" => (l, r) -> {
-			var a = unwrapNum(l, "Operator '-' expects numbers");
-			var b = unwrapNum(r, "Operator '-' expects numbers");
+			var a:Float = TypeUtils.expectFloat(l);
+			var b:Float = TypeUtils.expectFloat(r);
 			var res = a - b;
 			return (Math.floor(res) == res) ? VInt(Std.int(res)) : VFloat(res);
 		},
 		"*" => (l, r) -> {
-			var a = unwrapNum(l, "Operator '*' expects numbers");
-			var b = unwrapNum(r, "Operator '*' expects numbers");
+			var a:Float = TypeUtils.expectFloat(l);
+			var b:Float = TypeUtils.expectFloat(r);
 			var res = a * b;
 			return (Math.floor(res) == res) ? VInt(Std.int(res)) : VFloat(res);
 		},
 		"/" => (l, r) -> {
-			var a = unwrapNum(l, "Operator '/' expects numbers");
-			var b = unwrapNum(r, "Operator '/' expects numbers");
+			var a:Float = TypeUtils.expectFloat(l);
+			var b:Float = TypeUtils.expectFloat(r);
 			if (b == 0)
 				throw "Division by zero";
 			var res = a / b;
 			return (Math.floor(res) == res) ? VInt(Std.int(res)) : VFloat(res);
 		},
 		"%" => (l, r) -> {
-			var a = switch (l) {
-					case VInt(i): i;
-					default: throw "Operator '%' expects int";
-				}
-			var b = switch (r) {
-					case VInt(i): i;
-					default: throw "Operator '%' expects int";
-				}
+			var a:Int = TypeUtils.expectInt(l);
+			var b:Int = TypeUtils.expectInt(r);
 			return VInt(a % b);
 		},
-		/* ===== COMPARACIÓN ===== */
 		"==" => (l, r) -> {
 			return switch [l, r] {
 				case [VNull, VNull]: VBoolean(true);
@@ -73,24 +66,23 @@ class Interpreter {
 		},
 		"!=" => (l, r) -> {
 			var eq = OPERATORS["=="](l, r);
-			return VBoolean(!unwrapBool(eq, "Internal error"));
+			return VBoolean(!TypeUtils.expectBool(eq));
 		},
-		"<" => (l, r) -> VBoolean(unwrapNum(l, "< expects numbers") < unwrapNum(r, "< expects numbers")),
-		"<=" => (l, r) -> VBoolean(unwrapNum(l, "<= expects numbers") <= unwrapNum(r, "<= expects numbers")),
-		">" => (l, r) -> VBoolean(unwrapNum(l, "> expects numbers") > unwrapNum(r, "> expects numbers")),
-		">=" => (l, r) -> VBoolean(unwrapNum(l, ">= expects numbers") >= unwrapNum(r, ">= expects numbers")),
-		/* ===== LÓGICOS ===== */
+		"<" => (l, r) -> VBoolean(TypeUtils.expectFloat(l) < TypeUtils.expectFloat(r)),
+		"<=" => (l, r) -> VBoolean(TypeUtils.expectFloat(l) <= TypeUtils.expectFloat(r)),
+		">" => (l, r) -> VBoolean(TypeUtils.expectFloat(l) > TypeUtils.expectFloat(r)),
+		">=" => (l, r) -> VBoolean(TypeUtils.expectFloat(l) >= TypeUtils.expectFloat(r)),
 		"&&" => (l, r) -> {
-			var a = unwrapBool(l, "Operator '&&' expects boolean");
+			var a:Bool = TypeUtils.expectBool(l);
 			if (!a)
-				return VBoolean(false); // preparado para short-circuit real
-			return VBoolean(unwrapBool(r, "Operator '&&' expects boolean"));
+				return VBoolean(false);
+			return VBoolean(TypeUtils.expectBool(r));
 		},
 		"||" => (l, r) -> {
-			var a = unwrapBool(l, "Operator '||' expects boolean");
+			var a:Bool = TypeUtils.expectBool(l);
 			if (a)
 				return VBoolean(true);
-			return VBoolean(unwrapBool(r, "Operator '||' expects boolean"));
+			return VBoolean(TypeUtils.expectBool(r));
 		}
 	];
 
@@ -104,6 +96,16 @@ class Interpreter {
 			constant: true,
 			value: VClass(new Math()),
 			type: TCustom("Math")
+		},
+		"StringBuf" => {
+			constant: true,
+			value: VClass(new StringBuffer()),
+			type: TCustom("StringBuffer")
+		},
+		"Time" => {
+			constant: true,
+			value: VClass(new Time()),
+			type: TCustom("Time")
 		},
 		"String" => {
 			constant: true,
@@ -434,21 +436,6 @@ class Interpreter {
 		}
 
 		return VNull;
-	}
-
-	public inline static function unwrapNum(v:JangValue, error:String):Float {
-		return switch (v) {
-			case VInt(i): i;
-			case VFloat(f): f;
-			default: throw error;
-		}
-	}
-
-	static inline function unwrapBool(v:JangValue, err:String):Bool {
-		return switch (v) {
-			case VBoolean(b): b;
-			default: throw err;
-		}
 	}
 }
 

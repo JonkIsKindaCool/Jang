@@ -1,0 +1,31 @@
+let input = "1124124 + 2"
+let tokens = []
+
+let pos = 0;
+
+while (pos < input.length){
+    let char = input.charAt(pos)
+
+    if (char == " "){
+        pos++;
+    } elif (char == "+" || char == "-"){
+        tokens.push({type: "OPERATOR", value: char})
+        pos++
+    } else {
+        let num = ""
+        while (pos < input.length ){
+            let char = input.charAt(pos)
+
+            if (char == "+" || char == "-" || char == " "){
+                break;
+            }
+
+            num += char
+
+            pos++
+        }
+        tokens.push({type: "NUMBER", value: num})
+    }
+}
+
+return tokens
