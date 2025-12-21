@@ -5,6 +5,7 @@ import jang.runtime.Interpreter.JangValue;
 
 class IO extends JangClass<JangInstance> {
 	public static var instance:IO;
+
 	public function new() {
 		super("IO");
 		instance = this;
@@ -14,7 +15,7 @@ class IO extends JangClass<JangInstance> {
 		switch (name) {
 			case "print":
 				return VHaxeFunction(args -> {
-					var out = [for (a in args) Std.string(TypeUtils.jangToHaxe(a))].join(" ");
+					var out:String = [for (a in args) Std.string(TypeUtils.jangToHaxe(a))].join(" ");
 					#if js
 					js.Syntax.code("process.stdout.write({0})", out);
 					#else
@@ -25,7 +26,7 @@ class IO extends JangClass<JangInstance> {
 
 			case "println":
 				return VHaxeFunction(args -> {
-					var out = [for (a in args) Std.string(TypeUtils.jangToHaxe(a))].join(" ");
+					var out:String = [for (a in args) Std.string(TypeUtils.jangToHaxe(a))].join(" ");
 					#if js
 					js.Syntax.code("console.log({0})", out);
 					#else

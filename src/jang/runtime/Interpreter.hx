@@ -1,5 +1,6 @@
 package jang.runtime;
 
+import jang.std.system.Math;
 import jang.std.primitives.ObjectClass;
 import jang.utils.TypeUtils;
 import jang.std.primitives.StringClass;
@@ -98,6 +99,11 @@ class Interpreter {
 			constant: true,
 			value: VClass(new IO()),
 			type: TCustom("IO")
+		},
+		"Math" => {
+			constant: true,
+			value: VClass(new Math()),
+			type: TCustom("Math")
 		},
 		"String" => {
 			constant: true,
