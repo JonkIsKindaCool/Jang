@@ -10,7 +10,6 @@ import jang.std.primitives.ArrayClass;
 import jang.std.primitives.ObjectClass;
 
 class TypeUtils {
-
 	public static function jangToHaxe(v:JangValue):Dynamic {
 		return switch (v) {
 			case VString(s): s;
@@ -24,7 +23,8 @@ class TypeUtils {
 
 			case VObject(fields):
 				var obj:DynamicAccess<Dynamic> = {};
-				for (k => v in fields) obj[k] = jangToHaxe(v);
+				for (k => v in fields)
+					obj[k] = jangToHaxe(v);
 				obj;
 
 			case VInstance(i): i;
@@ -35,15 +35,22 @@ class TypeUtils {
 	}
 
 	public static function haxeToJang(v:Dynamic):JangValue {
-		if (v == null) return VNull;
+		if (v == null)
+			return VNull;
 
-		if (Std.isOfType(v, JangValue)) return v;
-		if (Std.isOfType(v, JangInstance)) return VInstance(v);
+		if (Std.isOfType(v, JangValue))
+			return v;
+		if (Std.isOfType(v, JangInstance))
+			return VInstance(v);
 
-		if (Std.isOfType(v, String)) return VString(v);
-		if (Std.isOfType(v, Bool)) return VBoolean(v);
-		if (Std.isOfType(v, Int)) return VInt(v);
-		if (Std.isOfType(v, Float)) return VFloat(v);
+		if (Std.isOfType(v, String))
+			return VString(v);
+		if (Std.isOfType(v, Bool))
+			return VBoolean(v);
+		if (Std.isOfType(v, Int))
+			return VInt(v);
+		if (Std.isOfType(v, Float))
+			return VFloat(v);
 
 		if (Std.isOfType(v, Array)) {
 			var arr:Array<Dynamic> = v;
@@ -61,7 +68,8 @@ class TypeUtils {
 	}
 
 	public static function checkType(v:JangValue, t:Type):Bool {
-		if (t.equals(TAny)) return true;
+		if (t.equals(TAny))
+			return true;
 
 		return switch (v) {
 			case VString(_): t.equals(TString);
@@ -71,9 +79,9 @@ class TypeUtils {
 			case VArray(_): t.equals(TArray);
 			case VObject(_): t.equals(TObject);
 			case VFunction(_) | VHaxeFunction(_): t.equals(TFunction);
+			case VClass(c): t.match(TCustom(_) ) && c.name == t.getParameters()[0];
 
-			case VInstance(i):
-				t.match(TCustom(_)) && i.name == t.getParameters()[0];
+			case VInstance(i): t.match(TCustom(_)) && i.name == t.getParameters()[0];
 
 			default:
 				false;
@@ -83,7 +91,7 @@ class TypeUtils {
 	public static function expectString(v:JangValue):String {
 		return switch (v) {
 			case VString(s): s;
-			default: error("String", v);
+			default: error("string", v);
 		}
 	}
 
@@ -91,7 +99,7 @@ class TypeUtils {
 		return switch (v) {
 			case VInt(i): i;
 			case VFloat(f): Std.int(f);
-			default: error("Int", v);
+			default: error("int", v);
 		}
 	}
 
@@ -99,35 +107,35 @@ class TypeUtils {
 		return switch (v) {
 			case VFloat(f): f;
 			case VInt(i): i;
-			default: error("Float", v);
+			default: error("float", v);
 		}
 	}
 
 	public static function expectBool(v:JangValue):Bool {
 		return switch (v) {
 			case VBoolean(b): b;
-			default: error("Bool", v);
+			default: error("bool", v);
 		}
 	}
 
 	public static function expectArray(v:JangValue):Array<JangValue> {
 		return switch (v) {
 			case VArray(a): a;
-			default: error("Array", v);
+			default: error("array", v);
 		}
 	}
 
 	public static function expectObject(v:JangValue):Map<String, JangValue> {
 		return switch (v) {
 			case VObject(o): o;
-			default: error("Object", v);
+			default: error("object", v);
 		}
 	}
 
 	public static function expectInstance(v:JangValue):JangInstance {
 		return switch (v) {
 			case VInstance(i): i;
-			default: error("Instance", v);
+			default: error("instance", v);
 		}
 	}
 
@@ -145,7 +153,8 @@ class TypeUtils {
 	}
 
 	public static function equals(a:JangValue, b:JangValue):Bool {
-		if (a.getIndex() != b.getIndex()) return false;
+		if (a.getIndex() != b.getIndex())
+			return false;
 
 		return switch ([a, b]) {
 			case [VString(x), VString(y)]: x == y;
@@ -169,21 +178,57 @@ class TypeUtils {
 		}
 	}
 
-	public static function typeName(v:JangValue):String {
-		return switch (v) {
-			case VString(_): "String";
-			case VInt(_): "Int";
-			case VFloat(_): "Float";
-			case VBoolean(_): "Bool";
-			case VArray(_): "Array";
-			case VObject(_): "Object";
-			case VInstance(i): i.name;
-			case VNull: "Null";
-			default: "Unknown";
+	static function error(expected:String, got:JangValue):Dynamic {
+		throw 'Expected $expected, got ${getValueName(got)}';
+	}
+
+	public static function getTypeName(t:Type):String {
+		return switch (t) {
+			case TInt:
+				'int';
+			case TFloat:
+				'float';
+			case TFunction:
+				'callable';
+			case TArray:
+				'array';
+			case TObject:
+				'object';
+			case TBool:
+				'boolean';
+			case TAny:
+				'any';
+			case TString:
+				'string';
+			case TCustom(c):
+				c;
 		}
 	}
 
-	static function error(expected:String, got:JangValue):Dynamic {
-		throw 'Expected $expected, got ${typeName(got)}';
+	public static function getValueName(v:JangValue):String {
+		return switch (v) {
+			case VString(s):
+				'string';
+			case VInt(i):
+				'int';
+			case VFloat(f):
+				'float';
+			case VBoolean(b):
+				'boolean';
+			case VNull:
+				'null';
+			case VObject(obj):
+				'object';
+			case VArray(arr):
+				'array';
+			case VClass(c):
+				c.name;
+			case VInstance(i):
+				i.name;
+			case VFunction(f):
+				'callable';
+			case VHaxeFunction(f):
+				'callable';
+		}
 	}
 }

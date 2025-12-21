@@ -149,6 +149,33 @@ let s = new String("hello");
 print(s.length);
 ```
 
+You can create a new class using the class keyword! (duh)
+
+```jang
+class Person{
+    let name: string = "template";
+
+    public func new(name: string){
+        this.name = name;
+    }
+
+    public func getName(): string {
+        return name
+    }
+
+    public func setName(n: string) {
+        this.name = n
+    }
+}
+
+let guy = new Person("Joao");
+print(guy.getName())
+
+guy.setName("Pong")
+
+print(guy.getName())
+```
+
 ---
 
 ## ➕ Operators

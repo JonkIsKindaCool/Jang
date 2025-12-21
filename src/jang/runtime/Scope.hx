@@ -20,7 +20,7 @@ class Scope {
 		if (TypeUtils.checkType(value, type)) {
 			variables.set(name, {value: value, constant: isConst, type: type});
 		} else {
-			throw 'Expected $type got $value';
+			throw 'Expected ${TypeUtils.getTypeName(type)} got ${TypeUtils.getValueName(value)}';
 		}
 	}
 
@@ -51,7 +51,7 @@ class Scope {
 				if (TypeUtils.checkType(value, type)) {
 					variables.set(name, {value: value, constant: variable.constant, type: variable.type});
 				} else {
-					throw 'Expected $type got $value';
+					throw 'Expected ${TypeUtils.getTypeName(type)} got ${TypeUtils.getValueName(value)}';
 				}
 			}
 			return;
@@ -66,7 +66,7 @@ class Scope {
 	public function callFunction(name:String, args:Array<JangValue>):JangValue {
 		var value:JangValue = get(name);
 
-		switch (value){
+		switch (value) {
 			case VFunction(f):
 				return interp.callFunction(f, args);
 			case VHaxeFunction(f):
@@ -74,6 +74,13 @@ class Scope {
 			default:
 				throw 'Value is not callable';
 		}
+	}
+
+	public function clone():Scope {
+		var s:Scope = new Scope(interp, parent);
+		s.variables = this.variables.copy();
+
+		return s;
 	}
 }
 

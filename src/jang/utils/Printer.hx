@@ -1,5 +1,6 @@
 package jang.utils;
 
+import jang.runtime.Interpreter.JangValue;
 import haxe.Rest;
 import jang.structures.Expr;
 import jang.structures.Token;
@@ -122,6 +123,38 @@ class Printer {
 				printExpr(p, spaces + 8);
 				printWithSpaces('Index:', spaces + 4);
 				printExpr(i, spaces + 8);
+			case Class(c):
+				printWithSpaces('Type: Class', spaces + 4);
+				printWithSpaces('Variables:', spaces + 4);
+				for (v in c.variables) {
+					printWithSpaces('Name: ${v.name}', spaces + 8);
+					printWithSpaces('Behaviour: ${v.behaviour}', spaces + 8);
+					printWithSpaces('Constant: ${v.constant}', spaces + 8);
+					printWithSpaces('Type: ${v.type}', spaces + 8);
+					printWithSpaces('Value:', spaces + 8);
+					if (v.value != null) {
+						printExpr(v.value, spaces + 12);
+					}
+				}
+				printWithSpaces('Functions:', spaces + 4);
+				for (f in c.functions) {
+					printWithSpaces('Name: ${f.name}', spaces + 8);
+					printWithSpaces('Behaviour: ${f.behaviour}', spaces + 8);
+					printWithSpaces('Type: ${f.type}', spaces + 8);
+					if (f.args.length > 0) {
+						printWithSpaces('Args:', spaces + 8);
+						for (a in f.args) {
+							printWithSpaces('Name: ${a.name}', spaces + 12);
+							printWithSpaces('Type: ${TypeUtils.getTypeName(a.type)}', spaces + 12);
+						}
+					}
+					if (f.body.length > 0) {
+						printWithSpaces('Body:', spaces + 8);
+						for (e in f.body) {
+							printExpr(e, spaces + 12);
+						}
+					}
+				}
 		}
 		printWithSpaces('}', spaces);
 	}

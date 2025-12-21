@@ -1,5 +1,6 @@
 package jang.structures;
 
+import jang.structures.ClassDeclaration;
 import jang.runtime.Interpreter.JangValue;
 
 enum Expr {
@@ -23,6 +24,7 @@ enum Expr {
     Object(fields:Array<ObjectField>);
     Array(inner:Array<ExprInfo>);
     Index(p:ExprInfo, i:ExprInfo);
+    Class(c:ClassDeclaration);
 }
 
 typedef ExprInfo = {

@@ -18,7 +18,7 @@ class ArrayClass extends JangClass<ArrayInstance> {
 			return new ArrayInstance(v.copy());
 		}
 
-		throw "Expected Array";
+		throw "Expected array";
 	}
 }
 

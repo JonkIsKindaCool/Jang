@@ -1,5 +1,7 @@
 package jang.runtime;
 
+import jang.structures.ClassDeclaration;
+import jang.structures.ClassDeclaration.VariableBehaviour;
 import jang.structures.Expr;
 import jang.structures.Token;
 import jang.errors.JangError;
@@ -161,6 +163,9 @@ class Parser {
 				var rStart:TokenInfo = advance();
 				var rExpr:ExprInfo = parseAssigment();
 				return makeFromExprs(makeExprInfo(rStart.startPos, rStart.endPos, rStart.line, NullLiteral), rExpr, Ender(Return(rExpr)));
+
+			case IDENTIFIER("class"):
+				return parseClass();
 
 			case IDENTIFIER("break"):
 				var bStart:TokenInfo = advance();
@@ -432,6 +437,155 @@ class Parser {
 			default:
 				return e;
 		}
+	}
+
+	private function parseClass():ExprInfo {
+		var s:TokenInfo = peak();
+		advance();
+		var e:TokenInfo = peak();
+		var name:String = getIdent();
+
+		var extend:String = null;
+
+		switch (peak().token) {
+			case IDENTIFIER("extends"):
+				advance();
+				extend = getIdent();
+			case LBRACE:
+			default:
+				throw 'Unexpected token';
+		}
+
+		var clazz:ClassDeclaration = {
+			name: name,
+			extend: extend,
+			variables: [],
+			functions: []
+		}
+
+		expect(LBRACE);
+
+		while (!peak().token.equals(RBRACE)) {
+			var behaviour:Array<VariableBehaviour> = [];
+			while (true) {
+				switch (peak().token) {
+					case IDENTIFIER('private'):
+						advance();
+						if (!behaviour.contains(PRIVATE))
+							behaviour.push(PRIVATE);
+						else
+							throw 'Private already defined';
+					case IDENTIFIER('public'):
+						advance();
+						if (behaviour.contains(PRIVATE))
+							throw 'Private already defined';
+						else if (behaviour.contains(PUBLIC))
+							throw 'Public already defined';
+						else
+							behaviour.push(PUBLIC);
+					case IDENTIFIER('static'):
+						advance();
+						if (!behaviour.contains(STATIC))
+							behaviour.push(STATIC);
+						else
+							throw 'Static already defined';
+					case IDENTIFIER(_):
+						break;
+					default:
+						throw 'Unexpected token ' + peak().token;
+				}
+			}
+
+			var type:String = getIdent();
+
+			switch (type) {
+				case 'let', 'const':
+					var name:String = getIdent();
+					var t:Type = TAny;
+					var isConst:Bool = type == "const";
+					var value:ExprInfo = null;
+
+					if (peak().token.equals(COLON)) {
+						advance();
+						t = getType();
+					}
+
+					if (isConst) {
+						expect(OPERATOR("="));
+						value = parseLogicalOr();
+						if (peak().token.equals(SEMICOLON))
+							advance();
+					} else {
+						if (peak().token.equals(OPERATOR("="))) {
+							advance();
+							value = parseLogicalOr();
+						}
+
+						if (peak().token.equals(SEMICOLON))
+							advance();
+					}
+
+					clazz.variables.push({
+						name: name,
+						type: t,
+						constant: isConst,
+						value: value,
+						behaviour: behaviour
+					});
+				case 'func':
+					var name:String = getIdent();
+					var t:Type = TAny;
+					var args:Array<Argument> = [];
+					var body:Array<ExprInfo> = [];
+
+					expect(LPAREN);
+
+					while (!peak().token.equals(RPAREN)) {
+						var argName:String = getIdent();
+						var argType:Type = TAny;
+
+						if (peak().token.equals(COLON)) {
+							advance();
+							argType = getType();
+						}
+
+						args.push({name: argName, type: argType});
+
+						if (!peak().token.equals(RPAREN))
+							expect(COMMA);
+					}
+
+					expect(RPAREN);
+
+					if (peak().token.equals(COLON)) {
+						advance();
+						t = getType();
+					}
+					expect(LBRACE);
+
+					while (!peak().token.equals(RBRACE)) {
+						body.push(parseStatements());
+						if (peak().token.equals(SEMICOLON))
+							advance();
+					}
+
+					expect(RBRACE);
+
+					clazz.functions.push(
+						{
+							name: name,
+							type: t,
+							body: body,
+							behaviour: behaviour,
+							args: args
+						}
+					);
+			}
+		}
+
+		expect(RBRACE);
+
+		return makeExprInfo(s.startPos, e.endPos, s.line, Class(clazz));
 	}
 
 	private function getIdent():String {

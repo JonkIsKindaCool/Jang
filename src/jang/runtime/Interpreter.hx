@@ -1,5 +1,6 @@
 package jang.runtime;
 
+import jang.runtime.custom.CustomClass;
 import jang.std.others.Time;
 import jang.std.others.StringBuf.StringBuffer;
 import jang.std.system.Math;
@@ -382,6 +383,12 @@ class Interpreter {
 						default:
 							throw 'Value is not a class/constructor';
 					}
+				case Class(c):
+					var clazz:CustomClass = new CustomClass(c, this, c.name);
+					var value:JangValue = VClass(clazz);
+					
+					scope.define(clazz.name, value, true, TCustom(clazz.name));
+					return value;
 				default:
 					throw 'Unhandled expression: ' + Std.string(e.expr);
 			}
@@ -413,7 +420,7 @@ class Interpreter {
 			if (TypeUtils.checkType(val, arg.type)) {
 				local.define(arg.name, val, false, arg.type);
 			} else {
-				throw 'Expected ' + Std.string(arg.type) + ', not ' + (val == null ? "null" : val.getName());
+				throw 'Expected ' + TypeUtils.getTypeName(arg.type) + ', not ' + (val == null ? "null" : TypeUtils.getValueName(val));
 			}
 		}
 
@@ -427,7 +434,7 @@ class Interpreter {
 						if (TypeUtils.checkType(value, type)) {
 							return value;
 						} else {
-							throw 'Expected ' + Std.string(type) + ', not ' + (value == null ? "null" : value.getName());
+							throw 'Expected ' + TypeUtils.getTypeName(type) + ', not ' + (value == null ? "null" : TypeUtils.getValueName(value));
 						}
 					default:
 						throw 'Unexpected ender ' + Std.string(e);

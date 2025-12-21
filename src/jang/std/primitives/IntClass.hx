@@ -21,11 +21,11 @@ class IntClass extends JangClass<IntInstance> {
 			case VFloat(f): Std.int(f);
 			case VString(s):
 				var p = Std.parseInt(s);
-				if (p == null) throw "Invalid Int string";
+				if (p == null) throw "Invalid int string";
 				p;
 			case VBoolean(b): b ? 1 : 0;
 			default:
-				throw 'Expected String, Int, Float or Bool';
+				throw 'Expected string, int, float or bool';
 		};
 
 		return new IntInstance(arg);
