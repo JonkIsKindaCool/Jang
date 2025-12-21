@@ -76,6 +76,18 @@ class Lexer {
 					pushToken(STRING(str), start, pos - 1);
 					continue;
 
+				case '/' : {
+					var next = input.charAt(i + 1);
+					switch (next){
+						case '/':
+							while (true){
+								if (input.charAt(i) == "\n") break;
+								i++;
+							}
+							continue;
+					}
+				}
+
 				case '(':
 					i++;
 					pushToken(LPAREN, pos, pos);

@@ -36,7 +36,7 @@ class Person extends Entity{
     }
 }
 
-let guy = new Person(111, "Joao");
+let guy: Person = new Person(111, "Joao");
 print(guy.getName())
 
 guy.setName("Pong")

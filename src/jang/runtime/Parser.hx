@@ -641,7 +641,7 @@ class Parser {
 			case 'array': TArray;
 			case 'object': TObject;
 			default:
-				syntaxError(current(), "Unknown type '" + typeName + "'", "Did you forget to define it?");
+				TCustom(typeName);
 		}
 		return TAny;
 	}
