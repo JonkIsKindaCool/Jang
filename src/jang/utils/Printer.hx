@@ -103,6 +103,25 @@ class Printer {
 					printWithSpaces('Else Statement:', spaces + 4);
 					printExpr(elsE, spaces + 8);
 				}
+			case Object(fields):
+				printWithSpaces('Type: Object Literal', spaces + 4);
+				printWithSpaces('Fields: ', spaces + 4);
+				for (field in fields) {
+					printWithSpaces('Name: ${field.name}', spaces + 8);
+					printExpr(field.value, spaces + 8);
+				}
+			case Array(inner):
+				printWithSpaces('Type: Array Literal', spaces + 4);
+				printWithSpaces('Fields: ', spaces + 4);
+				for (f in inner) {
+					printExpr(f, spaces + 8);
+				}
+			case Index(p, i):
+				printWithSpaces('Type: Index', spaces + 4);
+				printWithSpaces('Parent:', spaces + 4);
+				printExpr(p, spaces + 8);
+				printWithSpaces('Index:', spaces + 4);
+				printExpr(i, spaces + 8);
 		}
 		printWithSpaces('}', spaces);
 	}

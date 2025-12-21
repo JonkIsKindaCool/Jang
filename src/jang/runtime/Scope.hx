@@ -1,5 +1,6 @@
 package jang.runtime;
 
+import jang.utils.TypeUtils;
 import jang.structures.Expr.Type;
 import jang.runtime.Interpreter.JangValue;
 import haxe.ds.StringMap;
@@ -16,7 +17,7 @@ class Scope {
 	}
 
 	public function define(name:String, value:JangValue, isConst:Bool, ?type:Type = TAny):Void {
-		if (checkType(value, type)) {
+		if (TypeUtils.checkType(value, type)) {
 			variables.set(name, {value: value, constant: isConst, type: type});
 		} else {
 			throw 'Expected $type got $value';
@@ -47,7 +48,7 @@ class Scope {
 			if (variable.constant)
 				throw 'Cannot modify a constant value';
 			else {
-				if (checkType(value, type)) {
+				if (TypeUtils.checkType(value, type)) {
 					variables.set(name, {value: value, constant: variable.constant, type: variable.type});
 				} else {
 					throw 'Expected $type got $value';
@@ -72,35 +73,6 @@ class Scope {
 				return f(args);
 			default:
 				throw 'Value is not callable';
-		}
-	}
-
-	public static function checkType(v:JangValue, t:Type) {
-		if (t.equals(TAny))
-			return true;
-
-		switch (v) {
-			case VString(_):
-				return t.equals(TString);
-			case VInt(i):
-				return t.equals(TInt);
-			case VFloat(f):
-				return t.equals(TFloat) || t.equals(TInt);
-			case VBoolean(b):
-				return t.equals(TBool);
-			case VInstance(i):
-				if (t.match(TCustom(_))) {
-					var name:String = t.getParameters()[0];
-					if (i.name == name)
-						return true;
-				}
-				return false;
-			case VFunction(f):
-				return t.equals(TFunction);
-			case VHaxeFunction(f):
-				return t.equals(TFunction);
-			default:
-				return false;
 		}
 	}
 }

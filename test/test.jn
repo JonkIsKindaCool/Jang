@@ -1,9 +1,1 @@
-let aea = 0.4;
-
-if (aea < 0.3){
-    IO.println("lower");
-} elif (aea < 0.6){
-    IO.println("mid");
-} else {
-    IO.println("upper");
-}
+break

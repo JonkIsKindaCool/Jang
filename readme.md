@@ -25,7 +25,7 @@ IO.println(result);
 ## Language Constructs
 
 - **Variables**: `let` (mutable) and `const` (immutable)
-- **Functions**: Defined with `fn name(args) { ... }`
+- **Functions**: Defined with `func name(args) { ... }`
 - **Control Flow**: `while` loops
 - **Operators**: Arithmetic (`+`, `-`, `*`, `/`, `%`), comparison (`==`, `!=`, `<`, `>`, `<=`, `>=`)
 - **Comments**: Not yet implemented in current lexer/parser.

@@ -1,5 +1,7 @@
 package jang.structures;
 
+import jang.runtime.Interpreter.JangValue;
+
 enum Expr {
     NumberLiteral(value:Float);
     BooleanLiteral(value:Bool); 
@@ -18,6 +20,9 @@ enum Expr {
     Ender(e:Ender);
     Function(expr:Array<ExprInfo>, args:Array<Argument>, type: Type, ?name:String);
     If(cond:ExprInfo, body:ExprInfo, ?elsE:ExprInfo);
+    Object(fields:Array<ObjectField>);
+    Array(inner:Array<ExprInfo>);
+    Index(p:ExprInfo, i:ExprInfo);
 }
 
 typedef ExprInfo = {
@@ -42,8 +47,15 @@ enum Type {
     TInt;
     TFloat;
     TFunction;
+    TArray;
+    TObject;
     TBool;
     TAny;
     TString;
     TCustom(c:String);
+}
+
+typedef ObjectField = {
+    name: String,
+    value: ExprInfo
 }

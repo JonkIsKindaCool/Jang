@@ -1,6 +1,6 @@
 package jang.std;
 
-import jang.utils.Converter;
+import jang.utils.TypeUtils;
 import jang.runtime.Interpreter;
 import jang.runtime.Interpreter.JangValue;
 
@@ -14,18 +14,18 @@ class IO extends JangClass<JangInstance> {
 			case "print":
 				return VHaxeFunction(args -> {
 					#if js
-					js.Syntax.code("console.log({0})", [for (arg in args) Converter.jangToHaxe(arg)].join(", "));
+					js.Syntax.code("console.log({0})", [for (arg in args) TypeUtils.jangToHaxe(arg)].join(", "));
 					#else
-					Sys.print([for (arg in args) Converter.jangToHaxe(arg)].join(", "));
+					Sys.print([for (arg in args) TypeUtils.jangToHaxe(arg)].join(", "));
 					#end
 					return VNull;
 				});
 			case "println":
 				return VHaxeFunction(args -> {
 					#if js
-					js.Syntax.code("console.log({0})", [for (arg in args) Converter.jangToHaxe(arg)].join(", "));
+					js.Syntax.code("console.log({0})", [for (arg in args) TypeUtils.jangToHaxe(arg)].join(", "));
 					#else
-					Sys.println([for (arg in args) Converter.jangToHaxe(arg)].join(", "));
+					Sys.println([for (arg in args) TypeUtils.jangToHaxe(arg)].join(", "));
 					#end
 					return VNull;
 				});

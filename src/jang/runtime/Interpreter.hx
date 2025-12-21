@@ -1,12 +1,13 @@
 package jang.runtime;
 
-import jang.utils.Converter;
-import jang.structures.JangFunction;
+import jang.std.ObjectClass;
+import jang.utils.TypeUtils;
 import jang.std.StringClass;
 import jang.std.IntClass;
 import jang.std.IO;
 import jang.std.JangInstance;
 import jang.runtime.Scope;
+import jang.std.ArrayClass;
 import jang.std.JangClass;
 import jang.runtime.Scope.JangVariable;
 import jang.structures.Expr;
@@ -17,81 +18,78 @@ using StringTools;
 
 class Interpreter {
 	public static var OPERATORS:Map<String, (JangValue, JangValue) -> JangValue> = [
-		"+" => (l:JangValue, r:JangValue) -> {
-			var lv:Dynamic = unwrapAny(l);
-			var rv:Dynamic = unwrapAny(r);
-			var isString:Bool = (Std.isOfType(lv, String) || Std.isOfType(rv, String));
-			var isFloat:Bool = (!isString && (lv != Std.int(lv) || rv != Std.int(rv)));
-			if (isString)
-				return VString((lv : String) + (rv : String));
-			var result:Float = (lv : Float) + (rv : Float);
-			return isFloat ? VFloat(result) : VInt(Std.int(result));
+		/* ===== ARITMÉTICOS ===== */
+		"+" => (l, r) -> {
+			var lv = TypeUtils.jangToHaxe(l);
+			var rv = TypeUtils.jangToHaxe(r);
+			// concatenación string
+			if (Std.isOfType(lv, String) || Std.isOfType(rv, String))
+				return VString(Std.string(lv) + Std.string(rv));
+			var a = unwrapNum(l, "Operator '+' expects numbers");
+			var b = unwrapNum(r, "Operator '+' expects numbers");
+			var res = a + b;
+			return (Math.floor(res) == res) ? VInt(Std.int(res)) : VFloat(res);
 		},
-		"-" => (l:JangValue, r:JangValue) -> {
-			var error:String = "Operator '-' only supports int or float";
-			var lv:Float = unwrapNum(l, error);
-			var rv:Float = unwrapNum(r, error);
-			var result:Float = lv - rv;
-			return (Math.floor(result) == result) ? VInt(Std.int(result)) : VFloat(result);
+		"-" => (l, r) -> {
+			var a = unwrapNum(l, "Operator '-' expects numbers");
+			var b = unwrapNum(r, "Operator '-' expects numbers");
+			var res = a - b;
+			return (Math.floor(res) == res) ? VInt(Std.int(res)) : VFloat(res);
 		},
-		"*" => (l:JangValue, r:JangValue) -> {
-			var error:String = "Operator '*' only supports int or float";
-			var lv:Float = unwrapNum(l, error);
-			var rv:Float = unwrapNum(r, error);
-			var result:Float = lv * rv;
-			return (Math.floor(result) == result) ? VInt(Std.int(result)) : VFloat(result);
+		"*" => (l, r) -> {
+			var a = unwrapNum(l, "Operator '*' expects numbers");
+			var b = unwrapNum(r, "Operator '*' expects numbers");
+			var res = a * b;
+			return (Math.floor(res) == res) ? VInt(Std.int(res)) : VFloat(res);
 		},
-		"/" => (l:JangValue, r:JangValue) -> {
-			var error:String = "Operator '/' only supports int or float";
-			var lv:Float = unwrapNum(l, error);
-			var rv:Float = unwrapNum(r, error);
-			if (rv == 0)
+		"/" => (l, r) -> {
+			var a = unwrapNum(l, "Operator '/' expects numbers");
+			var b = unwrapNum(r, "Operator '/' expects numbers");
+			if (b == 0)
 				throw "Division by zero";
-			var result:Float = lv / rv;
-			return (Math.floor(result) == result) ? VInt(Std.int(result)) : VFloat(result);
+			var res = a / b;
+			return (Math.floor(res) == res) ? VInt(Std.int(res)) : VFloat(res);
 		},
-		"%" => (l:JangValue, r:JangValue) -> {
-			var error:String = "Operator '%' only supports int";
-			var lv:Int = switch (l) {
+		"%" => (l, r) -> {
+			var a = switch (l) {
 					case VInt(i): i;
-					default: throw error;
+					default: throw "Operator '%' expects int";
 				}
-			var rv:Int = switch (r) {
+			var b = switch (r) {
 					case VInt(i): i;
-					default: throw error;
+					default: throw "Operator '%' expects int";
 				}
-			var result:Int = lv % rv;
-			return VInt(result);
+			return VInt(a % b);
 		},
-		"==" => (l:JangValue, r:JangValue) -> {
-			var lv:Dynamic = unwrapAny(l);
-			var rv:Dynamic = unwrapAny(r);
-			return VBoolean(lv == rv);
+		/* ===== COMPARACIÓN ===== */
+		"==" => (l, r) -> {
+			return switch [l, r] {
+				case [VNull, VNull]: VBoolean(true);
+				case [VNull, _] | [_, VNull]: VBoolean(false);
+				default:
+					VBoolean(TypeUtils.jangToHaxe(l) == TypeUtils.jangToHaxe(r));
+			}
 		},
-		"!=" => (l:JangValue, r:JangValue) -> {
-			var lv:Dynamic = unwrapAny(l);
-			var rv:Dynamic = unwrapAny(r);
-			return VBoolean(lv != rv);
+		"!=" => (l, r) -> {
+			var eq = OPERATORS["=="](l, r);
+			return VBoolean(!unwrapBool(eq, "Internal error"));
 		},
-		"<" => (l:JangValue, r:JangValue) -> {
-			var lv:Float = unwrapNum(l, "Operator '<' only supports numbers");
-			var rv:Float = unwrapNum(r, "Operator '<' only supports numbers");
-			return VBoolean(lv < rv);
+		"<" => (l, r) -> VBoolean(unwrapNum(l, "< expects numbers") < unwrapNum(r, "< expects numbers")),
+		"<=" => (l, r) -> VBoolean(unwrapNum(l, "<= expects numbers") <= unwrapNum(r, "<= expects numbers")),
+		">" => (l, r) -> VBoolean(unwrapNum(l, "> expects numbers") > unwrapNum(r, "> expects numbers")),
+		">=" => (l, r) -> VBoolean(unwrapNum(l, ">= expects numbers") >= unwrapNum(r, ">= expects numbers")),
+		/* ===== LÓGICOS ===== */
+		"&&" => (l, r) -> {
+			var a = unwrapBool(l, "Operator '&&' expects boolean");
+			if (!a)
+				return VBoolean(false); // preparado para short-circuit real
+			return VBoolean(unwrapBool(r, "Operator '&&' expects boolean"));
 		},
-		"<=" => (l:JangValue, r:JangValue) -> {
-			var lv:Float = unwrapNum(l, "Operator '<=' only supports numbers");
-			var rv:Float = unwrapNum(r, "Operator '<=' only supports numbers");
-			return VBoolean(lv <= rv);
-		},
-		">" => (l:JangValue, r:JangValue) -> {
-			var lv:Float = unwrapNum(l, "Operator '>' only supports numbers");
-			var rv:Float = unwrapNum(r, "Operator '>' only supports numbers");
-			return VBoolean(lv > rv);
-		},
-		">=" => (l:JangValue, r:JangValue) -> {
-			var lv:Float = unwrapNum(l, "Operator '>=' only supports numbers");
-			var rv:Float = unwrapNum(r, "Operator '>=' only supports numbers");
-			return VBoolean(lv >= rv);
+		"||" => (l, r) -> {
+			var a = unwrapBool(l, "Operator '||' expects boolean");
+			if (a)
+				return VBoolean(true);
+			return VBoolean(unwrapBool(r, "Operator '||' expects boolean"));
 		}
 	];
 
@@ -110,6 +108,16 @@ class Interpreter {
 			constant: true,
 			value: VClass(new IntClass()),
 			type: TCustom("Int")
+		},
+		"Object" => {
+			constant: true,
+			value: VClass(new ObjectClass()),
+			type: TCustom("Object")
+		},
+		"Array" => {
+			constant: true,
+			value: VClass(new ArrayClass()),
+			type: TCustom("Array")
 		}
 	];
 
@@ -128,7 +136,16 @@ class Interpreter {
 			scope.variables = GLOBALS.copy();
 		}
 
-		return executeExpr(e, scope);
+		try {
+			return executeExpr(e, scope);
+		} catch (e:Ender){
+			switch (e){
+				case Return(e):
+					return executeExpr(e, scope);
+				default:
+					throw 'Unexpected Ender $e';
+			}
+		}
 	}
 
 	public function executeExpr(e:ExprInfo, scope:Scope):JangValue {
@@ -160,18 +177,50 @@ class Interpreter {
 				case NullLiteral:
 					return VNull;
 				case BinaryOp(left, op, right):
-					if (op.contains("=")) {
+					if (op == "=" || op == "+=" || op == "-=" || op == "*=" || op == "/=") {
 						if (left.expr.match(Identifier(_))) {
 							var name:String = left.expr.getParameters()[0];
 							var value:JangValue = VNull;
-							if (op.length > 1) {
-								value = executeExpr(Parser.makeExprInfo(e.posStart, e.posEnd, e.line,
-									BinaryOp(Parser.makeExprInfo(e.posStart, e.posStart + name.length, e.line, Identifier(name)), op.split("=")[0], right)),
-									scope);
+							if (op != "=") {
+								value = executeExpr(Parser.makeExprInfo(e.posStart, e.posEnd, e.line, BinaryOp(left, op.split("=")[0], right)), scope);
 							} else {
 								value = executeExpr(right, scope);
 							}
 							scope.assign(name, value);
+							return value;
+						} else if (left.expr.match(Field(_, _))) {
+							var parent:JangInstance = TypeUtils.primitiveToInstance(executeExpr(left.expr.getParameters()[0], scope));
+							var name:String = left.expr.getParameters()[1];
+							var value:JangValue = VNull;
+							if (op != "=") {
+								value = executeExpr(Parser.makeExprInfo(e.posStart, e.posEnd, e.line, BinaryOp(left, op.split("=")[0], right)), scope);
+							} else {
+								value = executeExpr(right, scope);
+							}
+							parent.setVariable(name, value);
+
+							return value;
+						} else if (left.expr.match(Index(_, _))) {
+							var parent:JangInstance = TypeUtils.primitiveToInstance(executeExpr(left.expr.getParameters()[0], scope));
+							var index:JangValue = executeExpr(left.expr.getParameters()[1], scope);
+							var value:JangValue = VNull;
+							if (op != "=") {
+								value = executeExpr(Parser.makeExprInfo(e.posStart, e.posEnd, e.line, BinaryOp(left, op.split("=")[0], right)), scope);
+							} else {
+								value = executeExpr(right, scope);
+							}
+
+							var f:JangValue = parent.getVariable('__index_setter__');
+
+							switch (f) {
+								case VFunction(f):
+									callFunction(f, [index, value]);
+								case VHaxeFunction(f):
+									f([index, value]);
+								default:
+									throw 'Index setter (__index_setter__) doesnt exists';
+							}
+
 							return value;
 						}
 					}
@@ -187,7 +236,15 @@ class Interpreter {
 					} catch (opErr) {
 						throw opErr;
 					}
-
+				case Object(fields):
+					var fMap:Map<String, JangValue> = new Map();
+					for (field in fields) {
+						fMap.set(field.name, executeExpr(field.value, scope));
+					}
+					return VObject(fMap);
+				case Array(inner):
+					var arr:Array<JangValue> = [for (v in inner) executeExpr(v, scope)];
+					return VArray(arr);
 				case Function(exprs, args, type, name):
 					var func:JangFunction = {
 						body: exprs,
@@ -229,19 +286,30 @@ class Interpreter {
 						var c:JangClass<Dynamic> = parent.getParameters()[0];
 						return c.getVariable(f);
 					}
-					var instance:JangInstance = switch (parent) {
-						case VString(s):
-							new StringInstance(s);
-						case VInstance(i):
-							i;
-						case VInt(i):
-							new IntInstance(i);
-						default:
-							null;
-					}
+					var instance:JangInstance = TypeUtils.primitiveToInstance(parent);
 					if (instance == null)
 						throw "Cannot access field on non-instance";
 					return instance.getVariable(f);
+				case Index(p, i):
+					var parent:JangValue = executeExpr(p, scope);
+					if (parent.match(VClass(_))) {
+						throw "Index access not allowed in classes";
+					}
+
+					var instance:JangInstance = TypeUtils.primitiveToInstance(parent);
+					if (instance == null)
+						throw "Cannot use Index on non-instance";
+
+					var f:JangValue = instance.getVariable('__index_access__');
+
+					switch (f) {
+						case VFunction(f):
+							return callFunction(f, [executeExpr(i, scope)]);
+						case VHaxeFunction(f):
+							return f([executeExpr(i, scope)]);
+						default:
+							throw 'Index access (__index_access__) doesnt exists';
+					}
 				case Top(inner):
 					return executeExpr(inner, scope);
 				case If(cond, body, elsE):
@@ -249,7 +317,7 @@ class Interpreter {
 					if (!condValue.match(VBoolean(_)))
 						throw 'If statement condition should be a boolean';
 
-					if (Converter.jangToHaxe(condValue)) {
+					if (TypeUtils.jangToHaxe(condValue)) {
 						var local:Scope = new Scope(this, scope);
 						executeExpr(body, local);
 					} else {
@@ -259,34 +327,40 @@ class Interpreter {
 						}
 					}
 				case While(c, b):
-					var shouldRun:Bool = true;
-					var shouldAdvance:Bool = false;
-					while (unwrapAny(executeExpr(c, scope)) && shouldRun) {
+					while (true) {
+						var condValue:JangValue = executeExpr(c, scope);
+
+						var cond:Bool = switch (condValue) {
+							case VBoolean(b): b;
+							default:
+								throw "While condition must be boolean";
+						}
+
+						if (!cond)
+							break;
+
 						var local:Scope = new Scope(this, scope);
 
-						for (expr in b) {
-							try {
+						try {
+							for (expr in b) {
 								executeExpr(expr, local);
-							} catch (innerErr:Ender) {
-								switch (innerErr) {
-									case Return(ret):
-										var value:JangValue = executeExpr(ret, local);
-										return value;
-									case Break:
-										shouldRun = false;
-									case Continue:
-										shouldAdvance = true;
-										break;
-								}
+							}
+						} catch (err:Ender) {
+							switch (err) {
+								case Return(ret):
+									return executeExpr(ret, local);
+
+								case Break:
+									break;
+
+								case Continue:
+									continue;
 							}
 						}
-
-						if (shouldAdvance) {
-							shouldAdvance = false;
-							continue;
-						}
 					}
+
 					return VNull;
+
 				case New(name, args):
 					var cval:JangValue = scope.get(name);
 					switch (cval) {
@@ -301,8 +375,8 @@ class Interpreter {
 		} catch (ender:Ender) {
 			throw ender;
 		} catch (err) {
-			var msg:String = Std.string(err);
-			throw new JangError(this.source, if (e == null) 1 else e.posStart, if (e == null) 1 else e.posEnd, if (e == null) 1 else e.line, msg,
+			var msg:String = err.details();
+			new JangError(this.source, if (e == null) 1 else e.posStart, if (e == null) 1 else e.posEnd, if (e == null) 1 else e.line, msg,
 				JangErrorType.RUNTIME_ERROR, "main.jn", null);
 		}
 
@@ -323,7 +397,7 @@ class Interpreter {
 		for (i => arg in arguments) {
 			var val:JangValue = args[i];
 
-			if (Scope.checkType(val, arg.type)) {
+			if (TypeUtils.checkType(val, arg.type)) {
 				local.define(arg.name, val, false, arg.type);
 			} else {
 				throw 'Expected ' + Std.string(arg.type) + ', not ' + (val == null ? "null" : val.getName());
@@ -337,7 +411,7 @@ class Interpreter {
 				switch (e) {
 					case Return(ret):
 						var value:JangValue = executeExpr(ret, local);
-						if (Scope.checkType(value, type)) {
+						if (TypeUtils.checkType(value, type)) {
 							return value;
 						} else {
 							throw 'Expected ' + Std.string(type) + ', not ' + (value == null ? "null" : value.getName());
@@ -359,17 +433,10 @@ class Interpreter {
 		}
 	}
 
-	public inline static function unwrapAny(v:JangValue):Dynamic {
+	static inline function unwrapBool(v:JangValue, err:String):Bool {
 		return switch (v) {
-			case VString(s): s;
-			case VInt(i): i;
-			case VFloat(f): f;
 			case VBoolean(b): b;
-			case VNull: null;
-			case VInstance(i): i;
-			case VClass(c): c;
-			case VFunction(f): f;
-			case VHaxeFunction(f): f;
+			default: throw err;
 		}
 	}
 }
@@ -380,8 +447,17 @@ enum JangValue {
 	VFloat(f:Float);
 	VBoolean(b:Bool);
 	VNull;
+	VObject(obj:Map<String, JangValue>);
+	VArray(arr:Array<JangValue>);
 	VClass(c:JangClass<Dynamic>);
 	VInstance(i:JangInstance);
 	VFunction(f:JangFunction);
 	VHaxeFunction(f:(args:Array<JangValue>) -> JangValue);
+}
+
+typedef JangFunction = {
+	body:Array<ExprInfo>,
+	args:Array<Argument>,
+	type:Type,
+	closure:Scope
 }

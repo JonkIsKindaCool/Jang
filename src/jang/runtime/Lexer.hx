@@ -35,6 +35,7 @@ class Lexer {
 					i++;
 					pos++;
 					pos = 1;
+					line++;
 					continue;
 
 				case '"':

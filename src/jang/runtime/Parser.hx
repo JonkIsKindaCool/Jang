@@ -52,7 +52,7 @@ class Parser {
 
 				advance();
 				expect(LPAREN);
-				var cond:ExprInfo = parseEquality();
+				var cond:ExprInfo = parseLogicalOr();
 				var lastPos:Int = peak().startPos;
 				expect(RPAREN);
 
@@ -123,7 +123,7 @@ class Parser {
 			case IDENTIFIER("while"):
 				var whileStart:TokenInfo = advance();
 				expect(LPAREN);
-				var cond:ExprInfo = parseAssigment();
+				var cond:ExprInfo = parseLogicalOr();
 				expect(RPAREN);
 				expect(LBRACE);
 
@@ -138,53 +138,6 @@ class Parser {
 				expect(RBRACE);
 
 				return makeFromTokenRange(whileStart, current(), While(cond, body));
-
-			case IDENTIFIER("func"):
-				var funcStart:TokenInfo = advance();
-
-				var name:String = null;
-				var type:Type = TAny;
-				var args:Array<Argument> = [];
-				var body:Array<ExprInfo> = [];
-
-				if (peak().token.match(IDENTIFIER(_)))
-					name = advance().token.getParameters()[0];
-
-				expect(LPAREN);
-
-				while (!peak().token.equals(RPAREN)) {
-					var argName:String = getIdent();
-					var argType:Type = TAny;
-
-					if (peak().token.equals(COLON)) {
-						advance();
-						argType = getType();
-					}
-
-					args.push({name: argName, type: argType});
-
-					if (!peak().token.equals(RPAREN))
-						expect(COMMA);
-				}
-
-				expect(RPAREN);
-
-				if (peak().token.equals(COLON)) {
-					advance();
-					type = getType();
-				}
-
-				expect(LBRACE);
-
-				while (!peak().token.equals(RBRACE)) {
-					body.push(parseStatements());
-					if (peak().token.equals(SEMICOLON))
-						advance();
-				}
-
-				expect(RBRACE);
-
-				return makeFromTokenRange(funcStart, current(), Function(body, args, type, name));
 
 			case IDENTIFIER("import"):
 				var impStart:TokenInfo = advance();
@@ -222,19 +175,42 @@ class Parser {
 	}
 
 	private function parseAssigment():ExprInfo {
-		if (peak(1).token.equals(OPERATOR("="))
-			|| peak(1).token.equals(OPERATOR("+="))
-			|| peak(1).token.equals(OPERATOR("-="))
-			|| peak(1).token.equals(OPERATOR("*="))
-			|| peak(1).token.equals(OPERATOR("/="))) {
-			var left:ExprInfo = parseEquality();
-			var opTok:TokenInfo = advance();
-			var op:String = opTok.token.getParameters()[0];
-			var right:ExprInfo = parseAssigment();
+		var left = parseLogicalOr();
+
+		if (peak().token.equals(OPERATOR("=")) || peak().token.equals(OPERATOR("+=")) || peak().token.equals(OPERATOR("-="))
+			|| peak().token.equals(OPERATOR("*=")) || peak().token.equals(OPERATOR("/="))) {
+			var opTok = advance();
+			var op = opTok.token.getParameters()[0];
+			var right = parseAssigment();
+
 			return makeFromExprs(left, right, BinaryOp(left, op, right));
 		}
 
-		return parseEquality();
+		return left;
+	}
+
+	private function parseLogicalOr():ExprInfo {
+		var left = parseLogicalAnd();
+
+		while (peak().token.equals(OPERATOR("||"))) {
+			var opTok = advance();
+			var right = parseLogicalAnd();
+			left = makeFromExprs(left, right, BinaryOp(left, "||", right));
+		}
+
+		return left;
+	}
+
+	private function parseLogicalAnd():ExprInfo {
+		var left = parseEquality();
+
+		while (peak().token.equals(OPERATOR("&&"))) {
+			var opTok = advance();
+			var right = parseEquality();
+			left = makeFromExprs(left, right, BinaryOp(left, "&&", right));
+		}
+
+		return left;
 	}
 
 	private function parseEquality():ExprInfo {
@@ -290,6 +266,88 @@ class Parser {
 
 	private function parsePrimitives():ExprInfo {
 		switch (peak().token) {
+			case IDENTIFIER("func"):
+				var funcStart:TokenInfo = advance();
+
+				var name:String = null;
+				var type:Type = TAny;
+				var args:Array<Argument> = [];
+				var body:Array<ExprInfo> = [];
+
+				if (peak().token.match(IDENTIFIER(_)))
+					name = advance().token.getParameters()[0];
+
+				expect(LPAREN);
+
+				while (!peak().token.equals(RPAREN)) {
+					var argName:String = getIdent();
+					var argType:Type = TAny;
+
+					if (peak().token.equals(COLON)) {
+						advance();
+						argType = getType();
+					}
+
+					args.push({name: argName, type: argType});
+
+					if (!peak().token.equals(RPAREN))
+						expect(COMMA);
+				}
+
+				expect(RPAREN);
+
+				if (peak().token.equals(COLON)) {
+					advance();
+					type = getType();
+				}
+
+				expect(LBRACE);
+
+				while (!peak().token.equals(RBRACE)) {
+					body.push(parseStatements());
+					if (peak().token.equals(SEMICOLON))
+						advance();
+				}
+
+				expect(RBRACE);
+
+				return makeFromTokenRange(funcStart, current(), Function(body, args, type, name));
+			case LBRACKET:
+				var line:Int = peak().line;
+				var startPos:Int = advance().startPos;
+				var fields:Array<ExprInfo> = [];
+
+				while (!peak().token.equals(RBRACKET)) {
+					var v:ExprInfo = parseAssigment();
+					fields.push(v);
+
+					if (!peak().token.equals(RBRACKET))
+						expect(COMMA);
+				}
+
+				expect(RBRACKET);
+
+				return makeExprInfo(startPos, startPos, line, Array(fields));
+			case LBRACE:
+				var line:Int = peak().line;
+				var startPos:Int = advance().startPos;
+				var fields:Array<ObjectField> = [];
+
+				while (!peak().token.equals(RBRACE)) {
+					var fieldName:String = getIdent();
+					expect(COLON);
+					var value:ExprInfo = parseEquality();
+
+					fields.push({name: fieldName, value: value});
+
+					if (!peak().token.equals(RBRACE))
+						expect(COMMA);
+				}
+
+				expect(RBRACE);
+
+				return makeExprInfo(startPos, startPos, line, Object(fields));
+
 			case NUMBER(value):
 				var t:TokenInfo = advance();
 				return makeExprInfo(t.startPos, t.endPos, t.line, NumberLiteral(value));
@@ -350,6 +408,11 @@ class Parser {
 				var one2:ExprInfo = makeExprInfo(e.posStart, e.posEnd, e.line, NumberLiteral(1));
 				return makeExprInfo(e.posStart, opTok2.endPos, e.line, BinaryOp(e, "-=", one2));
 
+			case LBRACKET:
+				var s:TokenInfo = advance();
+				var access:ExprInfo = parsePrimitives();
+				var end:TokenInfo = advance();
+				return makeExprInfo(e.posStart, end.endPos, end.line, Index(e, access));
 			case DOT:
 				advance();
 				var field:String = getIdent();
@@ -421,6 +484,8 @@ class Parser {
 			case "boolean": TBool;
 			case "any": TAny;
 			case "callable": TFunction;
+			case 'array': TArray;
+			case 'object': TObject;
 			default:
 				syntaxError(current(), "Unknown type '" + typeName + "'", "Did you forget to define it?");
 		}
