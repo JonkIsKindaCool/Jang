@@ -4,8 +4,8 @@
   "license": "MIT",
   "tags": ["cross"],
   "description": "A experimental scripting engine made in haxe.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "classPath": "src/",
-  "releasenote": "Initial release, everything is working correctly.",
+  "releasenote": "Added little things.",
   "contributors": ["JonkIsKindaCool"]
 }
