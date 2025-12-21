@@ -67,27 +67,59 @@ class TypeUtils {
 		return VNull;
 	}
 
-	public static function checkType(v:JangValue, t:Type):Bool {
-		if (t.equals(TAny))
+	public static function checkType(v:JangValue, expected:Type):Bool {
+		if (expected == TAny)
 			return true;
 
-		return switch (v) {
-			case VString(_): t.equals(TString);
-			case VInt(_): t.equals(TInt);
-			case VFloat(_): t.equals(TFloat) || t.equals(TInt);
-			case VBoolean(_): t.equals(TBool);
-			case VArray(_): t.equals(TArray);
-			case VObject(_): t.equals(TObject);
-			case VFunction(_) | VHaxeFunction(_): t.equals(TFunction);
-			case VClass(c): t.match(TCustom(_) ) && c.name == t.getParameters()[0];
+		return switch ([v, expected]) {
+			case [VInt(_), TInt]:
+				true;
 
-			case VInstance(i): t.match(TCustom(_)) && i.name == t.getParameters()[0];
+			case [VFloat(_), TFloat]:
+				true;
+
+			case [VInt(_), TFloat]:
+				true;
+
+			case [VFloat(_), TInt]:
+				true;
+
+			case [VString(_), TString]:
+				true;
+
+			case [VBoolean(_), TBool]:
+				true;
+
+			case [VNull, TObject]:
+				true;
+
+			case [VNull, TArray]:
+				true;
+
+			case [VNull, TCustom(_)]:
+				true;
+
+			case [VArray(_), TArray]:
+				true;
+
+			case [VObject(_), TObject]:
+				true;
+
+			case [VFunction(_), TFunction]:
+				true;
+
+			case [VHaxeFunction(_), TFunction]:
+				true;
+
+			case [VClass(c), TCustom(name)]:
+				c.name == name;
+
+			case [VInstance(i), TCustom(name)]: i.name == name;
 
 			default:
 				false;
 		}
 	}
-
 	public static function expectString(v:JangValue):String {
 		return switch (v) {
 			case VString(s): s;

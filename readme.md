@@ -152,11 +152,27 @@ print(s.length);
 You can create a new class using the class keyword! (duh)
 
 ```jang
-class Person{
+class Entity {
+    let xPos: float = 0;
+    let yPos: float = 0;
+
+    public func new (x: float, y: float){
+        xPos = x;
+        yPos = y;
+    }
+
+    public func getPos(): array {
+        return [xPos, yPos]
+    }
+}
+
+class Person extends Entity{
     let name: string = "template";
 
-    public func new(name: string){
+    public func new(x: float, name: string){
+        super(x, 0);
         this.name = name;
+
     }
 
     public func getName(): string {
@@ -166,14 +182,21 @@ class Person{
     public func setName(n: string) {
         this.name = n
     }
+
+    public func getPos(): array {
+        let val: array = super.getPos()
+        val[0] += 70;
+        return val
+    }
 }
 
-let guy = new Person("Joao");
+let guy = new Person(111, "Joao");
 print(guy.getName())
 
 guy.setName("Pong")
 
 print(guy.getName())
+print(guy.getPos())
 ```
 
 ---

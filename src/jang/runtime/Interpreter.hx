@@ -416,7 +416,6 @@ class Interpreter {
 
 		for (i => arg in arguments) {
 			var val:JangValue = args[i];
-
 			if (TypeUtils.checkType(val, arg.type)) {
 				local.define(arg.name, val, false, arg.type);
 			} else {

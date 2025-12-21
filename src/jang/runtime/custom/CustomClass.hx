@@ -1,167 +1,194 @@
 package jang.runtime.custom;
 
-import haxe.macro.Expr;
-import jang.structures.Expr.Argument;
-import jang.runtime.Interpreter.JangFunction;
-import jang.structures.Expr.Type;
-import jang.structures.Expr.ExprInfo;
+import jang.runtime.Interpreter;
+import jang.runtime.Interpreter.JangValue;
 import jang.structures.ClassDeclaration;
 import jang.std.JangClass;
-import jang.runtime.Interpreter.JangValue;
 import jang.std.JangInstance;
+import jang.runtime.Scope;
 
 class CustomClass extends JangClass<CustomInstance> {
-	public var parent:Interpreter;
+	public var interpreter:Interpreter;
 	public var decl:ClassDeclaration;
 
-	public var publicV:Array<String>;
-	public var privateV:Array<String>;
-	public var variables:Scope;
+	public var publicVars:Array<String> = [];
+	public var privateVars:Array<String> = [];
+	public var instanceScope:Scope;
 
-	public var publicStatic:Array<String>;
-	public var privateStatic:Array<String>;
-	public var staticVariables:Scope;
+	public var publicStatic:Array<String> = [];
+	public var privateStatic:Array<String> = [];
+	public var staticScope:Scope;
 
-	public function new(decl:ClassDeclaration, parent:Interpreter, name:String) {
+	public function new(decl:ClassDeclaration, interpreter:Interpreter, name:String) {
 		super(name);
 
 		this.decl = decl;
-		this.parent = parent;
+		this.interpreter = interpreter;
 
-		publicStatic = [];
-		privateStatic = [];
-
-		privateV = [];
-		publicV = [];
-
-		variables = new Scope(parent, parent.scope);
-		staticVariables = new Scope(parent, parent.scope);
+		instanceScope = new Scope(interpreter, interpreter.scope);
+		staticScope = new Scope(interpreter, interpreter.scope);
 
 		for (v in decl.variables) {
-			var name:String = v.name;
-			var constant:Bool = v.constant;
-			var value:ExprInfo = v.value;
-			var type:Type = v.type;
-			if (v.behaviour.contains(STATIC)) {
-				if (v.behaviour.contains(PUBLIC))
-					publicStatic.push(name);
-				else
-					privateStatic.push(name);
+			var isStatic:Bool = v.behaviour.contains(STATIC);
+			var isPublic:Bool = v.behaviour.contains(PUBLIC);
 
-				staticVariables.define(name, parent.executeExpr(value, staticVariables), constant, type);
-			} else {
-				if (v.behaviour.contains(PUBLIC))
-					publicV.push(name);
-				else
-					privateV.push(name);
+			var scope:Scope = isStatic ? staticScope : instanceScope;
+			var list:Array<String> = isStatic ? (isPublic ? publicStatic : privateStatic) : (isPublic ? publicVars : privateVars);
 
-				variables.define(name, parent.executeExpr(value, staticVariables), constant, type);
-			}
+			list.push(v.name);
+			scope.define(v.name, interpreter.executeExpr(v.value, scope), v.constant, v.type);
 		}
 
 		for (f in decl.functions) {
-			var name:String = f.name;
-			var type:Type = f.type;
-			var args:Array<Argument> = f.args;
-			var body:Array<ExprInfo> = f.body;
-			var behaviour:Array<VariableBehaviour> = f.behaviour;
+			var isStatic: Bool = f.behaviour.contains(STATIC);
+			var isPublic:Bool = f.behaviour.contains(PUBLIC);
 
-			if (behaviour.contains(STATIC)) {
-				if (behaviour.contains(PUBLIC))
-					publicStatic.push(name);
-				else
-					privateStatic.push(name);
+			var scope:Scope = isStatic ? staticScope : instanceScope;
+			var list:Array<String> = isStatic ? (isPublic ? publicStatic : privateStatic) : (isPublic ? publicVars : privateVars);
 
-				staticVariables.define(name, VFunction({
-					body: body,
-					args: args,
-					type: type,
-					closure: new Scope(parent, staticVariables)
-				}), false, TFunction);
-			} else {
-				if (behaviour.contains(PUBLIC))
-					publicV.push(name);
-				else
-					privateV.push(name);
+			list.push(f.name);
 
-				variables.define(name, VFunction({
-					body: body,
-					args: args,
-					type: type,
-					closure: new Scope(parent, variables)
-				}), false, TFunction);
-			}
+			scope.define(f.name, VFunction({
+				body: f.body,
+				args: f.args,
+				type: f.type,
+				closure: null
+			}), false, TFunction);
 		}
 	}
 
 	override function createInstance(args:Array<JangValue>):CustomInstance {
-		var instance:CustomInstance = new CustomInstance(parent, name);
-		instance.variables = variables;
-		instance.publicVariables = publicV;
-		instance.privateVariables = privateV;
+		var inst:CustomInstance = new CustomInstance(interpreter, name, decl.extend);
 
-		instance.init(args);
+		inst.variables = new Scope(interpreter, instanceScope);
+		inst.publicVariables = publicVars;
+		inst.privateVariables = privateVars;
 
-		return instance;
+		inst.init(args);
+		return inst;
 	}
 
 	override function getVariable(name:String):JangValue {
-		if (staticVariables.exists(name)) {
-			if (publicStatic.contains(name)) {
-				return staticVariables.get(name);
-			} else {
-				throw 'Variable $name is private';
-			}
+		if (staticScope.exists(name)) {
+			if (!publicStatic.contains(name))
+				throw 'Static variable $name is private';
+			return staticScope.get(name);
 		}
-
 		return super.getVariable(name);
 	}
 }
 
 class CustomInstance extends JangInstance {
+	public var variables:Scope;
 	public var publicVariables:Array<String>;
 	public var privateVariables:Array<String>;
 
-	public var variables:Scope;
+	public var parentClass:JangClass<Dynamic>;
+	public var parentInstance:JangInstance;
 
-	public var i:Interpreter;
+	private var extendName:String;
+	private var superCalled:Bool = false;
 
-	public function new(i:Interpreter, name:String) {
+	public var interpreter:Interpreter;
+
+	public function new(interpreter:Interpreter, name:String, extendName:String) {
 		super(name);
-		this.i = i;
+		this.interpreter = interpreter;
+		this.extendName = extendName;
 	}
 
 	public function init(args:Array<JangValue>) {
+		if (extendName != null) {
+			var v:JangValue = interpreter.scope.get(extendName);
+			switch (v) {
+				case VClass(c):
+					parentClass = c;
+				default:
+					throw 'Superclass $extendName is not a class';
+			}
+
+			variables.define("super", VHaxeFunction((args) -> {
+				if (superCalled)
+					throw 'super.new() already called';
+
+				parentInstance = parentClass.createInstance(args);
+				superCalled = true;
+
+				variables.define("super", VInstance(parentInstance), true, TCustom(parentInstance.name));
+
+				return VNull;
+			}), true, TFunction);
+		}
+
 		variables.define("this", VInstance(this), true, TCustom(name));
 
-		var f:JangValue = variables.get("new");
+		var ctor:JangValue = variables.get("new");
+		if (ctor == null)
+			throw 'Class $name has no constructor';
 
-		if (f == null)
-			throw 'Class $name doesnt have a constructor (new)';
+		if (privateVariables.contains("new"))
+			throw 'Constructor must be public';
 
-		if (privateVariables.contains("new")) throw '$name constructor should be a public function';
-
-		switch (f) {
+		switch (ctor) {
 			case VFunction(f):
-				i.callFunction(f, args);
+				var bound = {
+					body: f.body,
+					args: f.args,
+					type: f.type,
+					closure: variables
+				};
+				interpreter.callFunction(bound, args);
+
 			case VHaxeFunction(f):
 				f(args);
+
 			default:
-				throw 'Constructor should be a callable';
+				throw 'Constructor is not callable';
+		}
+
+		if (extendName != null && !superCalled)
+			throw 'Constructor must call super.new(...)';
+	}
+
+	private function bindMethodScope():Scope {
+		var s:Scope = new Scope(interpreter, variables);
+
+		s.define("this", VInstance(this), true, TCustom(this.name));
+
+		if (parentInstance != null) {
+			s.define("super", VInstance(parentInstance), true, TCustom(parentInstance.name));
+		}
+
+		return s;
+	}
+
+	override function getVariable(name:String):JangValue {
+		if (name == "__name__")
+			return VString(this.name);
+
+		try {
+			var v:JangValue = variables.get(name);
+
+			switch (v) {
+				case VFunction(f):
+					return VFunction({
+						body: f.body,
+						args: f.args,
+						type: f.type,
+						closure: bindMethodScope()
+					});
+
+				default:
+					return v;
+			}
+		} catch (_) {
+			if (parentInstance != null)
+				return parentInstance.getVariable(name);
+			throw 'Variable $name is not defined';
 		}
 	}
 
 	override function setVariable(name:String, value:JangValue) {
 		variables.assign(name, value);
-
-		super.setVariable(name, value);
-	}
-
-	override function getVariable(name:String):JangValue {
-		var v:JangValue = variables.get(name);
-
-		if (v != null) return v;
-
-		return super.getVariable(name);
 	}
 }
