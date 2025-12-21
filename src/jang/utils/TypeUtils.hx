@@ -4,10 +4,10 @@ import haxe.DynamicAccess;
 import jang.runtime.Interpreter.JangValue;
 import jang.structures.Expr.Type;
 import jang.std.JangInstance;
-import jang.std.StringClass.StringInstance;
-import jang.std.IntClass.IntInstance;
-import jang.std.ArrayClass.ArrayInstance;
-import jang.std.ObjectClass.ObjectInstance;
+import jang.std.primitives.StringClass;
+import jang.std.primitives.IntClass;
+import jang.std.primitives.ArrayClass;
+import jang.std.primitives.ObjectClass;
 
 class TypeUtils {
 

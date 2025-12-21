@@ -1,4 +1,4 @@
-package jang.std;
+package jang.std.primitives;
 
 import jang.utils.TypeUtils;
 import jang.runtime.Interpreter.JangValue;

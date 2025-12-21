@@ -1,13 +1,13 @@
 package jang.runtime;
 
-import jang.std.ObjectClass;
+import jang.std.primitives.ObjectClass;
 import jang.utils.TypeUtils;
-import jang.std.StringClass;
-import jang.std.IntClass;
-import jang.std.IO;
+import jang.std.primitives.StringClass;
+import jang.std.primitives.IntClass;
+import jang.std.system.IO;
 import jang.std.JangInstance;
 import jang.runtime.Scope;
-import jang.std.ArrayClass;
+import jang.std.primitives.ArrayClass;
 import jang.std.JangClass;
 import jang.runtime.Scope.JangVariable;
 import jang.structures.Expr;
@@ -93,7 +93,7 @@ class Interpreter {
 		}
 	];
 
-	public static var GLOBALS:Map<String, JangVariable> = [
+	public static final GLOBALS:Map<String, JangVariable> = [
 		"IO" => {
 			constant: true,
 			value: VClass(new IO()),
@@ -118,6 +118,11 @@ class Interpreter {
 			constant: true,
 			value: VClass(new ArrayClass()),
 			type: TCustom("Array")
+		},
+		"print" => {
+			constant: true,
+			value: IO.instance.getVariable("println"),
+			type: TFunction
 		}
 	];
 
