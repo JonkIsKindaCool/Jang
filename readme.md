@@ -14,8 +14,6 @@ behavior** rather than heavy abstractions.
 
 - Interpreted, AST-walker based execution
 - Static-like type annotations (checked at runtime)
-- First-class functions and closures
-- Classes and instances for primitives
 - Custom standard library (STD)
 - Clear error reporting with source locations
 - Written entirely in Haxe (multi-target friendly)
@@ -152,6 +150,7 @@ print(s.length);
 You can create a new class using the class keyword! (duh)
 
 ```jang
+//src/entity.jn
 class Entity {
     let xPos: float = 0;
     let yPos: float = 0;
@@ -190,7 +189,10 @@ class Person extends Entity{
     }
 }
 
-let guy = new Person(111, "Joao");
+//main.js
+import {Person} from "scripts.person";
+
+let guy: Person = new Person(111, "Joao");
 print(guy.getName())
 
 guy.setName("Pong")
@@ -301,7 +303,7 @@ print(o.toString());
 - **Interpreter** → Walks AST and executes nodes
 - **Scope** → Lexical scoping with closures
 - **JangValue** → Unified runtime value system
-- **JangClass / JangInstance** → STD-backed objects
+- **JangClass / JangInstance** → Custom classes / instances
 
 The interpreter is fully deterministic and explicit—no hidden magic.
 
@@ -331,10 +333,3 @@ Jang provides structured runtime and syntax errors with:
 ## 🚧 Status
 
 Jang is **actively evolving**.
-
-Planned improvements:
-
-- More STD utilities (Array, Object, JSON, Time)
-- Better short-circuit evaluation
-- Improved error stack traces
-- Module system improvements

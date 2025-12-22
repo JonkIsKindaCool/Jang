@@ -23,7 +23,7 @@ class Time extends JangClass<JangInstance> {
 
 	static inline function sleepSeconds(sec:Float):Void {
 		#if js
-		throw 'impossible in js'
+		throw 'impossible in js';
 		#else
 		Sys.sleep(sec);
 		#end

@@ -17,7 +17,6 @@ enum Expr {
     Top(e:ExprInfo);
     While(c:ExprInfo, b:Array<ExprInfo>);
     New(e:String, args:Array<ExprInfo>);
-    Import(p:Array<String>);
     Ender(e:Ender);
     Function(expr:Array<ExprInfo>, args:Array<Argument>, type: Type, ?name:String);
     If(cond:ExprInfo, body:ExprInfo, ?elsE:ExprInfo);
@@ -25,6 +24,7 @@ enum Expr {
     Array(inner:Array<ExprInfo>);
     Index(p:ExprInfo, i:ExprInfo);
     Class(c:ClassDeclaration);
+    Import(path:String, targets:Array<String>);
 }
 
 typedef ExprInfo = {

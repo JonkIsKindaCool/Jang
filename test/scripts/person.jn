@@ -18,7 +18,6 @@ class Person extends Entity{
     public func new(x: float, name: string){
         super(x, 0);
         this.name = name;
-
     }
 
     public func getName(): string {
@@ -35,11 +34,3 @@ class Person extends Entity{
         return val
     }
 }
-
-let guy: Person = new Person(111, "Joao");
-print(guy.getName())
-
-guy.setName("Pong")
-
-print(guy.getName())
-print(guy.getPos())

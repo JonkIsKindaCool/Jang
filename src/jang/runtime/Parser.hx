@@ -42,7 +42,12 @@ class Parser {
 	}
 
 	private function parseExpressions():ExprInfo {
-		return parseStatements();
+		switch (peak().token) {
+			case IDENTIFIER("class"):
+				return parseClass();
+			default:
+				return parseStatements();
+		}
 	}
 
 	private function parseStatements():ExprInfo {
@@ -141,31 +146,10 @@ class Parser {
 
 				return makeFromTokenRange(whileStart, current(), While(cond, body));
 
-			case IDENTIFIER("import"):
-				var impStart:TokenInfo = advance();
-				var path:Array<String> = [];
-
-				while (true) {
-					if (peak().token.equals(SEMICOLON))
-						break;
-
-					path.push(getIdent());
-
-					if (peak().token.equals(SEMICOLON))
-						break;
-					else
-						expect(DOT);
-				}
-
-				return makeFromTokenRange(impStart, current(), Import(path));
-
 			case IDENTIFIER("return"):
 				var rStart:TokenInfo = advance();
 				var rExpr:ExprInfo = parseAssigment();
 				return makeFromExprs(makeExprInfo(rStart.startPos, rStart.endPos, rStart.line, NullLiteral), rExpr, Ender(Return(rExpr)));
-
-			case IDENTIFIER("class"):
-				return parseClass();
 
 			case IDENTIFIER("break"):
 				var bStart:TokenInfo = advance();
@@ -173,7 +157,37 @@ class Parser {
 			case IDENTIFIER("continue"):
 				var cStart:TokenInfo = advance();
 				return makeExprInfo(cStart.startPos, cStart.endPos, cStart.line, Ender(Continue));
+			case IDENTIFIER("import"):
+				var start:TokenInfo = peak();
 
+				var imports:Array<String> = [];
+				var path:String = "";
+
+				advance();
+
+				expect(LBRACE);
+
+				while (!peak().token.equals(RBRACE)){
+					imports.push(getIdent());
+
+					if (!peak().token.equals(RBRACE))
+						expect(COMMA);
+				}
+
+				advance();
+
+				expect(IDENTIFIER("from"));
+
+				var end:TokenInfo = peak();
+
+				switch (peak().token){
+					case STRING(value):
+						path = value;
+					default:
+						throw 'placeholder';
+				}
+				
+				return makeFromTokenRange(start, end, Import(path, imports));
 			default:
 				return parseAssigment();
 		}
@@ -571,15 +585,13 @@ class Parser {
 
 					expect(RBRACE);
 
-					clazz.functions.push(
-						{
-							name: name,
-							type: t,
-							body: body,
-							behaviour: behaviour,
-							args: args
-						}
-					);
+					clazz.functions.push({
+						name: name,
+						type: t,
+						body: body,
+						behaviour: behaviour,
+						args: args
+					});
 			}
 		}
 

@@ -1,6 +1,6 @@
 --cwd test
 --library jang
 --class-path src
---resource test.jn
+--resource main.jn
 --main Main
 --run Main

@@ -1,5 +1,6 @@
 package jang.runtime;
 
+import jang.Jang.JangOutput;
 import jang.runtime.custom.CustomClass;
 import jang.std.others.Time;
 import jang.std.others.StringBuf.StringBuffer;
@@ -278,6 +279,13 @@ class Interpreter {
 				case Assignment(name, right, isConstant, type):
 					scope.define(name, executeExpr(right, scope), isConstant, type);
 					return VNull;
+				case Import(path, targets):
+					var output:JangOutput = Jang.resolveScript(path);
+					var interp:Interpreter = output.interp;
+
+					for (t in targets){
+						scope.variables.set(t, interp.scope.variables.get(t));
+					}
 				case Call(f, args):
 					var v:JangValue = executeExpr(f, scope);
 					var argVals:Array<JangValue> = [for (expr in args) executeExpr(expr, scope)];

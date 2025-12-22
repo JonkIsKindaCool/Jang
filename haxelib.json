@@ -4,7 +4,7 @@
   "license": "MIT",
   "tags": ["cross"],
   "description": "A experimental scripting engine made in haxe.",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "classPath": "src/",
   "releasenote": "Classes inheritance support, yaaay, oh, and a bugfix.",
   "contributors": ["JonkIsKindaCool"]

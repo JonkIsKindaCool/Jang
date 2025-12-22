@@ -78,9 +78,6 @@ class Printer {
 				for (arg in args) {
 					printExpr(arg, spaces + 8);
 				}
-			case Import(p):
-				printWithSpaces('Type: Import', spaces + 4);
-				printWithSpaces('Path: ${p.join(".")}', spaces + 4);
 			case Ender(e):
 				switch (e) {
 					case Return(e):
@@ -153,6 +150,15 @@ class Printer {
 						for (e in f.body) {
 							printExpr(e, spaces + 12);
 						}
+					}
+				}
+			case Import(path, targets):
+				printWithSpaces('Type: Import', spaces + 4);
+				printWithSpaces('Path: $path', spaces + 4);
+				if (targets.length > 0) {
+					printWithSpaces('Targets:', spaces + 4);
+					for (target in targets) {
+						printWithSpaces('$target', spaces + 8);
 					}
 				}
 		}
