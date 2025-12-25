@@ -6,6 +6,6 @@
   "description": "A experimental scripting engine made in haxe.",
   "version": "1.2.2",
   "classPath": "src/",
-  "releasenote": "Classes inheritance support, yaaay, oh, and a bugfix.",
+  "releasenote": "For loops, custom iterators, try/catch support.",
   "contributors": ["JonkIsKindaCool"]
 }
