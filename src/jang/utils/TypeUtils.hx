@@ -1,5 +1,6 @@
 package jang.utils;
 
+import jang.runtime.Interpreter.JangFunction;
 import haxe.DynamicAccess;
 import jang.runtime.Interpreter.JangValue;
 import jang.structures.Expr.Type;
@@ -9,6 +10,7 @@ import jang.std.primitives.IntClass;
 import jang.std.primitives.ArrayClass;
 import jang.std.primitives.ObjectClass;
 
+@:allow(jang.runtime.Interpreter)
 class TypeUtils {
 	public static function jangToHaxe(v:JangValue):Dynamic {
 		return switch (v) {
@@ -17,6 +19,10 @@ class TypeUtils {
 			case VFloat(f): f;
 			case VBoolean(b): b;
 			case VNull: null;
+			case VHaxeClass(c):
+				c;
+			case VHaxeObject(obj):
+				obj;
 
 			case VArray(arr):
 				[for (x in arr) jangToHaxe(x)];
@@ -64,7 +70,11 @@ class TypeUtils {
 			});
 		}
 
-		return VNull;
+		if (Std.isOfType(v, Class)) {
+			return VHaxeClass(v);
+		} else {
+			return VHaxeObject(v);
+		}
 	}
 
 	public static function checkType(v:JangValue, expected:Type):Bool {
@@ -115,11 +125,14 @@ class TypeUtils {
 				c.name == name;
 
 			case [VInstance(i), TCustom(name)]: i.name == name;
+			case [VHaxeObject(obj), TCustom(name)]: std.Type.getClassName(std.Type.getClass(obj)).split(".").pop() == name;
+			case [VHaxeClass(c), TCustom(name)]: std.Type.getClassName(c).split(".").pop() == name;
 
 			default:
 				false;
 		}
 	}
+
 	public static function expectString(v:JangValue):String {
 		return switch (v) {
 			case VString(s): s;
@@ -168,6 +181,13 @@ class TypeUtils {
 		return switch (v) {
 			case VInstance(i): i;
 			default: error("instance", v);
+		}
+	}
+
+	public static function expectFunction(v:JangValue):JangFunction {
+		return switch (v) {
+			case VFunction(i): i;
+			default: error("function", v);
 		}
 	}
 
@@ -239,6 +259,10 @@ class TypeUtils {
 
 	public static function getValueName(v:JangValue):String {
 		return switch (v) {
+			case VHaxeClass(c):
+				std.Type.getClassName(c).split(".").pop();
+			case VHaxeObject(obj):
+				std.Type.getClassName(std.Type.getClass(obj)).split(".").pop();
 			case VString(s):
 				'string';
 			case VInt(i):

@@ -24,6 +24,7 @@ class ArrayClass extends JangClass<ArrayInstance> {
 
 class ArrayInstance extends JangInstance {
 	var arr:Array<JangValue>;
+	var _counter:Int = 0;
 
 	public function new(v:Array<JangValue>) {
 		super("Array");
@@ -38,6 +39,26 @@ class ArrayInstance extends JangInstance {
 					if (i < 0 || i >= arr.length)
 						return VNull;
 					return arr[i];
+				});
+
+			case "__hasNext__":
+				return VHaxeFunction(args -> {
+					var boolean:Bool = false;
+
+					if (_counter < arr.length) {
+						boolean = true;
+					} else {
+						_counter = 0;
+						boolean = false;
+					}
+					return VBoolean(boolean);
+				});
+
+			case "__next__":
+				return VHaxeFunction(args -> {
+					var v:JangValue = arr[_counter];
+					_counter++;
+					return VArray([v]);
 				});
 
 			case "__index_setter__":

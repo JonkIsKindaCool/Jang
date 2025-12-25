@@ -23,6 +23,8 @@ class StringClass extends JangClass<StringInstance> {
 class StringInstance extends JangInstance {
 	public var value:String;
 
+	var _counter:Int = 0;
+
 	public function new(value:String) {
 		super("String");
 		this.value = value;
@@ -30,6 +32,26 @@ class StringInstance extends JangInstance {
 
 	override function getVariable(name:String):JangValue {
 		switch (name) {
+			case "__hasNext__":
+				return VHaxeFunction(args -> {
+					var boolean:Bool = false;
+
+					if (_counter < value.length) {
+						boolean = true;
+					} else {
+						_counter = 0;
+						boolean = false;
+					}
+					return VBoolean(boolean);
+				});
+
+			case "__next__":
+				return VHaxeFunction(args -> {
+					var v:JangValue = VString(value.charAt(_counter));
+					_counter++;
+					return VArray([v]);
+				});
+
 			case "length":
 				return VInt(value.length);
 
@@ -95,7 +117,6 @@ class StringInstance extends JangInstance {
 					return VString(val.join(""));
 				});
 
-
 			case "contains":
 				return VHaxeFunction(args -> VBoolean(value.indexOf(TypeUtils.expectString(args[0])) != -1));
 
@@ -111,7 +132,6 @@ class StringInstance extends JangInstance {
 			case "lastIndexOf":
 				return VHaxeFunction(args -> VInt(value.lastIndexOf(TypeUtils.expectString(args[0]))));
 
-
 			case "split":
 				return VHaxeFunction(args -> {
 					var d = TypeUtils.expectString(args[0]);
@@ -120,7 +140,6 @@ class StringInstance extends JangInstance {
 
 			case "replace":
 				return VHaxeFunction(args -> VString(StringTools.replace(value, TypeUtils.expectString(args[0]), TypeUtils.expectString(args[1]))));
-
 
 			case "toInt":
 				return VHaxeFunction(_ -> {

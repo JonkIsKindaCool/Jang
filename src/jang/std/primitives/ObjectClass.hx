@@ -22,15 +22,20 @@ class ObjectClass extends JangClass<ObjectInstance> {
 }
 
 class ObjectInstance extends JangInstance {
+	var _counter:Int = 0;
+
 	public var fields:Map<String, JangValue>;
+	public var len:Int;
 
 	public function new(?initial:Map<String, JangValue>) {
 		super("Object");
 		fields = initial != null ? initial : new Map();
+		len = Lambda.count(fields);
 	}
 
 	override function setVariable(name:String, value:JangValue) {
 		fields.set(name, value);
+		len = Lambda.count(fields);
 		super.setVariable(name, value);
 	}
 
@@ -39,6 +44,37 @@ class ObjectInstance extends JangInstance {
 			return fields.get(name);
 
 		switch (name) {
+			case "__hasNext__":
+				return VHaxeFunction(args -> {
+					var boolean:Bool = false;
+
+					if (_counter < len) {
+						boolean = true;
+					} else {
+						_counter = 0;
+						boolean = false;
+					}
+					return VBoolean(boolean);
+				});
+
+			case "__next__":
+				return VHaxeFunction(args -> {
+					var n:String = null;
+					var v:JangValue = null;
+					var c:Int = 0;
+					for (k => val in fields) {
+						if (_counter == c) {
+							n = k;
+							v = val;
+							break;
+						} else {
+							c++;
+						}
+					}
+
+					_counter++;
+					return VArray([VString(n), v]);
+				});
 
 			case "toString":
 				return VHaxeFunction(_ -> {
@@ -47,7 +83,6 @@ class ObjectInstance extends JangInstance {
 						parts.push(k + ": " + Std.string(TypeUtils.jangToHaxe(v)));
 					return VString("{ " + parts.join(", ") + " }");
 				});
-
 
 			case "get":
 				return VHaxeFunction(args -> {
@@ -72,7 +107,7 @@ class ObjectInstance extends JangInstance {
 				return VHaxeFunction(_ -> TypeUtils.haxeToJang([for (v in fields) v]));
 
 			case "size":
-				return VHaxeFunction(_ -> VInt(Lambda.count(fields)));
+				return VHaxeFunction(_ -> VInt(len));
 
 			case "clear":
 				return VHaxeFunction(_ -> {

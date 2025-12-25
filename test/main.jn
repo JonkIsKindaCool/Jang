@@ -1,9 +1,0 @@
-import {Person} from "scripts.person";
-
-let guy: Person = new Person(111, "Joao");
-print(guy.getName())
-
-guy.setName("Pong")
-
-print(guy.getName())
-print(guy.getPos())

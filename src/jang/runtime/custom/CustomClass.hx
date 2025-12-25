@@ -1,11 +1,11 @@
 package jang.runtime.custom;
 
-import jang.runtime.Interpreter;
 import jang.runtime.Interpreter.JangValue;
-import jang.structures.ClassDeclaration;
+import jang.runtime.Interpreter;
+import jang.runtime.Scope;
 import jang.std.JangClass;
 import jang.std.JangInstance;
-import jang.runtime.Scope;
+import jang.structures.ClassDeclaration;
 
 class CustomClass extends JangClass<CustomInstance> {
 	public var interpreter:Interpreter;
@@ -40,7 +40,7 @@ class CustomClass extends JangClass<CustomInstance> {
 		}
 
 		for (f in decl.functions) {
-			var isStatic: Bool = f.behaviour.contains(STATIC);
+			var isStatic:Bool = f.behaviour.contains(STATIC);
 			var isPublic:Bool = f.behaviour.contains(PUBLIC);
 
 			var scope:Scope = isStatic ? staticScope : instanceScope;
@@ -184,7 +184,20 @@ class CustomInstance extends JangInstance {
 		} catch (_) {
 			if (parentInstance != null)
 				return parentInstance.getVariable(name);
-			throw 'Variable $name is not defined';
+
+			var f:JangValue = variables.get("__get_variable__");
+
+			switch (f) {
+				case VFunction(f):
+					return interpreter.callFunction({
+						body: f.body,
+						args: f.args,
+						type: f.type,
+						closure: bindMethodScope()
+					}, [VString(name)]);
+				default:
+					throw 'Variable $name isnt defined';
+			}
 		}
 	}
 

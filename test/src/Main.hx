@@ -11,6 +11,10 @@ import jang.utils.Printer;
 function main() {
 	var t0:Float = Timer.stamp();
 
+	Obj;
+
+	Jang.allowHaxeImports = true;
+
 	var output:JangOutput = Jang.resolveScript("main");
 
 	var interpreter:Interpreter = output.interp;

@@ -1,10 +1,10 @@
 package jang.runtime;
 
-import jang.structures.ClassDeclaration;
+import jang.errors.JangError;
 import jang.structures.ClassDeclaration.VariableBehaviour;
+import jang.structures.ClassDeclaration;
 import jang.structures.Expr;
 import jang.structures.Token;
-import jang.errors.JangError;
 
 class Parser {
 	public function new() {}
@@ -100,7 +100,7 @@ class Parser {
 
 				return makeExprInfo(startPos, lastPos, line, If(cond, makeExprInfo(startPos, bodyPos, line, Block(body)), elsE));
 
-			case IDENTIFIER("let"), IDENTIFIER("const"):
+			case IDENTIFIER("let"), IDENTIFIER("const"), IDENTIFIER("var"):
 				var startTok:TokenInfo = advance();
 				var isConstant:Bool = startTok.token.equals(IDENTIFIER("const"));
 
@@ -146,10 +146,43 @@ class Parser {
 
 				return makeFromTokenRange(whileStart, current(), While(cond, body));
 
+			case IDENTIFIER("for"):
+				var whileStart:TokenInfo = advance();
+				expect(LPAREN);
+				var variables:Array<String> = [];
+				while (true){
+					variables.push(getIdent());
+					if (!peak().token.equals(IDENTIFIER("in")))
+						expect(COMMA);
+					else
+						break;
+				}
+				expect(IDENTIFIER("in"));
+				var it:ExprInfo = parsePrimitives();
+				expect(RPAREN);
+				var last:TokenInfo = current();
+				expect(LBRACE);
+
+				var body:Array<ExprInfo> = [];
+
+				while (!peak().token.equals(RBRACE)) {
+					body.push(parseStatements());
+					if (peak().token.equals(SEMICOLON))
+						advance();
+				}
+
+				expect(RBRACE);
+
+				return makeFromTokenRange(whileStart, last, For(variables, it, body));
+
 			case IDENTIFIER("return"):
 				var rStart:TokenInfo = advance();
 				var rExpr:ExprInfo = parseAssigment();
 				return makeFromExprs(makeExprInfo(rStart.startPos, rStart.endPos, rStart.line, NullLiteral), rExpr, Ender(Return(rExpr)));
+			case IDENTIFIER("throw"):
+				var rStart:TokenInfo = advance();
+				var rExpr:ExprInfo = parseAssigment();
+				return makeFromExprs(makeExprInfo(rStart.startPos, rStart.endPos, rStart.line, NullLiteral), rExpr, Ender(Throw(rExpr)));
 
 			case IDENTIFIER("break"):
 				var bStart:TokenInfo = advance();
@@ -167,7 +200,7 @@ class Parser {
 
 				expect(LBRACE);
 
-				while (!peak().token.equals(RBRACE)){
+				while (!peak().token.equals(RBRACE)) {
 					imports.push(getIdent());
 
 					if (!peak().token.equals(RBRACE))
@@ -180,14 +213,64 @@ class Parser {
 
 				var end:TokenInfo = peak();
 
-				switch (peak().token){
+				switch (peak().token) {
 					case STRING(value):
 						path = value;
 					default:
 						throw 'placeholder';
 				}
-				
+
 				return makeFromTokenRange(start, end, Import(path, imports));
+			case IDENTIFIER("try"):
+				var cc:CatchContent = null;
+
+				var start:TokenInfo = peak();
+				advance();
+				expect(LBRACE);
+
+				var body:Array<ExprInfo> = [];
+
+				while (!peak().token.equals(RBRACE)) {
+					body.push(parseStatements());
+					if (peak().token.equals(SEMICOLON))
+						advance();
+				}
+
+				var end:TokenInfo = peak();
+				expect(RBRACE);
+
+				switch (peak().token) {
+					case IDENTIFIER("catch"):
+						advance();
+						expect(LPAREN);
+						var name:String = getIdent();
+						expect(COLON);
+						var type:Type = getType();
+						expect(RPAREN);
+
+						var body:Array<ExprInfo> = [];
+
+						expect(LBRACE);
+
+						while (!peak().token.equals(RBRACE)) {
+							body.push(parseStatements());
+							if (peak().token.equals(SEMICOLON))
+								advance();
+						}
+
+						end = peak();
+						expect(RBRACE);
+
+						cc = {
+							body: body,
+							name: name,
+							type: type
+						}
+					default:
+				}
+
+				return makeFromTokenRange(start, end, Try(body, cc));
+
 			default:
 				return parseAssigment();
 		}
@@ -431,7 +514,7 @@ class Parser {
 				var s:TokenInfo = advance();
 				var access:ExprInfo = parsePrimitives();
 				var end:TokenInfo = advance();
-				return makeExprInfo(e.posStart, end.endPos, end.line, Index(e, access));
+				return parsePostfix(makeExprInfo(e.posStart, end.endPos, end.line, Index(e, access)));
 			case DOT:
 				advance();
 				var field:String = getIdent();
@@ -513,7 +596,7 @@ class Parser {
 			var type:String = getIdent();
 
 			switch (type) {
-				case 'let', 'const':
+				case 'let', 'const', 'var':
 					var name:String = getIdent();
 					var t:Type = TAny;
 					var isConst:Bool = type == "const";

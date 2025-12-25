@@ -1,23 +1,14 @@
 package jang.runtime;
 
 import jang.Jang.JangOutput;
-import jang.runtime.custom.CustomClass;
-import jang.std.others.Time;
-import jang.std.others.StringBuf.StringBuffer;
-import jang.std.system.Math;
-import jang.std.primitives.ObjectClass;
-import jang.utils.TypeUtils;
-import jang.std.primitives.StringClass;
-import jang.std.primitives.IntClass;
-import jang.std.system.IO;
-import jang.std.JangInstance;
-import jang.runtime.Scope;
-import jang.std.primitives.ArrayClass;
-import jang.std.JangClass;
-import jang.runtime.Scope.JangVariable;
-import jang.structures.Expr;
 import jang.errors.JangError;
-import haxe.ds.StringMap;
+import jang.runtime.Scope;
+import jang.runtime.custom.CustomClass;
+import jang.std.JangClass;
+import jang.std.JangInstance;
+import jang.std.system.Math;
+import jang.structures.Expr;
+import jang.utils.TypeUtils;
 
 using StringTools;
 
@@ -88,75 +79,26 @@ class Interpreter {
 		}
 	];
 
-	public static final GLOBALS:Map<String, JangVariable> = [
-		"IO" => {
-			constant: true,
-			value: VClass(new IO()),
-			type: TCustom("IO")
-		},
-		"Math" => {
-			constant: true,
-			value: VClass(new Math()),
-			type: TCustom("Math")
-		},
-		"StringBuf" => {
-			constant: true,
-			value: VClass(new StringBuffer()),
-			type: TCustom("StringBuffer")
-		},
-		"Time" => {
-			constant: true,
-			value: VClass(new Time()),
-			type: TCustom("Time")
-		},
-		"String" => {
-			constant: true,
-			value: VClass(new StringClass()),
-			type: TCustom("String")
-		},
-		"Int" => {
-			constant: true,
-			value: VClass(new IntClass()),
-			type: TCustom("Int")
-		},
-		"Object" => {
-			constant: true,
-			value: VClass(new ObjectClass()),
-			type: TCustom("Object")
-		},
-		"Array" => {
-			constant: true,
-			value: VClass(new ArrayClass()),
-			type: TCustom("Array")
-		},
-		"print" => {
-			constant: true,
-			value: IO.instance.getVariable("println"),
-			type: TFunction
-		}
-	];
-
 	public var scope:Scope;
 	public var source:String = "";
 
 	public function new() {
-		scope = new Scope(this);
-		scope.variables = GLOBALS.copy();
+		scope = new Scope(this, Jang.GLOBALS);
 	}
 
 	public function execute(e:ExprInfo, ?src:String):JangValue {
 		if (src != null)
 			this.source = src;
-		if (scope.variables != GLOBALS.copy()) {
-			scope.variables = GLOBALS.copy();
-		}
 
 		try {
 			return executeExpr(e, scope);
-		} catch (e:Ender){
-			switch (e){
+		} catch (e:JangEnders) {
+			switch (e) {
 				case Return(e):
-					return executeExpr(e, scope);
+					return e;
+				case Throw(e, info):
+					new JangError(src, info.posStart, info.posEnd, info.line, Std.string(TypeUtils.jangToHaxe(e)), RUNTIME_ERROR);
+					return VNull;
 				default:
 					throw 'Unexpected Ender $e';
 			}
@@ -167,7 +109,16 @@ class Interpreter {
 		try {
 			switch (e.expr) {
 				case Ender(en):
-					throw en;
+					switch (en) {
+						case Return(e):
+							throw JangEnders.Return(executeExpr(e, scope));
+						case Break:
+							throw JangEnders.Break;
+						case Continue:
+							throw JangEnders.Continue;
+						case Throw(v):
+							throw JangEnders.Throw(executeExpr(v, scope), e);
+					}
 				case Block(statements):
 					var last:JangValue = VNull;
 
@@ -204,7 +155,7 @@ class Interpreter {
 							scope.assign(name, value);
 							return value;
 						} else if (left.expr.match(Field(_, _))) {
-							var parent:JangInstance = TypeUtils.primitiveToInstance(executeExpr(left.expr.getParameters()[0], scope));
+							var jv:JangValue = executeExpr(left.expr.getParameters()[0], scope);
 							var name:String = left.expr.getParameters()[1];
 							var value:JangValue = VNull;
 							if (op != "=") {
@@ -212,6 +163,19 @@ class Interpreter {
 							} else {
 								value = executeExpr(right, scope);
 							}
+
+							switch (jv) {
+								case VHaxeObject(obj):
+									Reflect.setProperty(obj, name, TypeUtils.jangToHaxe(value));
+									return value;
+								case VHaxeClass(c):
+									Reflect.setProperty(c, name, TypeUtils.jangToHaxe(value));
+									return value;
+								default:
+							}
+
+							var parent:JangInstance = TypeUtils.primitiveToInstance(jv);
+
 							parent.setVariable(name, value);
 
 							return value;
@@ -280,12 +244,27 @@ class Interpreter {
 					scope.define(name, executeExpr(right, scope), isConstant, type);
 					return VNull;
 				case Import(path, targets):
+					var isHaxeClassAdded:Bool = false;
+					if (Jang.allowHaxeImports) {
+						for (i in targets) {
+							var c:Class<Dynamic> = std.Type.resolveClass('$path${(path != "" ? "." : "")}$i');
+							if (c != null) {
+								scope.define(i, VHaxeClass(c), true, TCustom(i));
+								isHaxeClassAdded = true;
+							}
+						}
+					}
+
+					if (isHaxeClassAdded)
+						return VNull;
+
 					var output:JangOutput = Jang.resolveScript(path);
 					var interp:Interpreter = output.interp;
 
-					for (t in targets){
+					for (t in targets) {
 						scope.variables.set(t, interp.scope.variables.get(t));
 					}
+					return VNull;
 				case Call(f, args):
 					var v:JangValue = executeExpr(f, scope);
 					var argVals:Array<JangValue> = [for (expr in args) executeExpr(expr, scope)];
@@ -297,21 +276,45 @@ class Interpreter {
 							case VFunction(fn):
 								return callFunction(fn, argVals);
 							default:
-								throw 'You can only call functions';
+								throw 'You can only call functions: ' + v;
 						}
 					} catch (callErr) {
 						throw callErr;
 					}
 				case Field(p, f):
 					var parent:JangValue = executeExpr(p, scope);
-					if (parent.match(VClass(_))) {
-						var c:JangClass<Dynamic> = parent.getParameters()[0];
-						return c.getVariable(f);
+
+					switch (parent) {
+						case VClass(c):
+							return c.getVariable(f);
+						case VHaxeClass(c):
+							var value:Dynamic = Reflect.getProperty(c, f);
+
+							if (Reflect.isFunction(value)) {
+								return VHaxeFunction(args -> {
+									var hxArgs = [for (a in args) TypeUtils.jangToHaxe(a)];
+									return TypeUtils.haxeToJang(Reflect.callMethod(c, value, hxArgs));
+								});
+							}
+
+							return TypeUtils.haxeToJang(value);
+						case VHaxeObject(obj):
+							var value:Dynamic = Reflect.getProperty(obj, f);
+
+							if (Reflect.isFunction(value)) {
+								return VHaxeFunction(args -> {
+									var hxArgs = [for (a in args) TypeUtils.jangToHaxe(a)];
+									return TypeUtils.haxeToJang(Reflect.callMethod(obj, value, hxArgs));
+								});
+							}
+
+							return TypeUtils.haxeToJang(value);
+						default:
+							var instance:JangInstance = TypeUtils.primitiveToInstance(parent);
+							if (instance == null)
+								throw "Cannot access field on non-instance";
+							return instance.getVariable(f);
 					}
-					var instance:JangInstance = TypeUtils.primitiveToInstance(parent);
-					if (instance == null)
-						throw "Cannot access field on non-instance";
-					return instance.getVariable(f);
 				case Index(p, i):
 					var parent:JangValue = executeExpr(p, scope);
 					if (parent.match(VClass(_))) {
@@ -367,16 +370,18 @@ class Interpreter {
 							for (expr in b) {
 								executeExpr(expr, local);
 							}
-						} catch (err:Ender) {
+						} catch (err:JangEnders) {
 							switch (err) {
 								case Return(ret):
-									return executeExpr(ret, local);
+									return ret;
 
 								case Break:
 									break;
 
 								case Continue:
 									continue;
+								default:
+									throw err;
 							}
 						}
 					}
@@ -386,6 +391,8 @@ class Interpreter {
 				case New(name, args):
 					var cval:JangValue = scope.get(name);
 					switch (cval) {
+						case VHaxeClass(c):
+							return VHaxeObject(std.Type.createInstance(c, [for (arg in args) TypeUtils.jangToHaxe(executeExpr(arg, scope))]));
 						case VClass(clazz):
 							return VInstance(clazz.createInstance([for (arg in args) executeExpr(arg, scope)]));
 						default:
@@ -394,17 +401,76 @@ class Interpreter {
 				case Class(c):
 					var clazz:CustomClass = new CustomClass(c, this, c.name);
 					var value:JangValue = VClass(clazz);
-					
+
 					scope.define(clazz.name, value, true, TCustom(clazz.name));
 					return value;
+				case Try(body, catchContent):
+					var local:Scope = new Scope(this, scope);
+					try {
+						for (expr in body) {
+							executeExpr(expr, local = new Scope(this, scope));
+						}
+					} catch (e:JangEnders) {
+						switch (e) {
+							case Return(e):
+								return e;
+							case Throw(e, info):
+								if (catchContent == null) throw e; else {
+									if (TypeUtils.checkType(e, catchContent.type)) {
+										var catchLocal:Scope = new Scope(this, scope);
+										catchLocal.define(catchContent.name, e, false, catchContent.type);
+
+										for (expr in catchContent.body) {
+											executeExpr(expr, catchLocal);
+										}
+										return VNull;
+									} else {
+										return VNull;
+									}
+								}
+							default:
+								throw e;
+						}
+					}
+				case For(v, iterator, body):
+					var it:JangInstance = TypeUtils.primitiveToInstance(executeExpr(iterator, scope));
+					var hasNext:JangValue = it.getVariable('__hasNext__');
+					var next:JangValue = it.getVariable('__next__');
+
+					inline function callValueXD(v:JangValue, args):JangValue {
+						switch (v){
+							case VHaxeFunction(f):
+								return f(args);
+							case VFunction(f):
+								return callFunction(f, args);
+							default:
+								return TypeUtils.error('function', v);
+						}
+					}
+
+					while (TypeUtils.expectBool(callValueXD(hasNext, []))) {
+						var local:Scope = new Scope(this, scope);
+						var value:Array<JangValue> = TypeUtils.expectArray(callValueXD((next), []));
+						for (i => n in v){
+							local.define(n, value[i], false);
+						}
+						for (expr in body) {
+							try {
+								executeExpr(expr, local);
+							} catch (ex) {
+								throw ex;
+							}
+						}
+					}
+
+					return VNull;
 				default:
 					throw 'Unhandled expression: ' + Std.string(e.expr);
 			}
-		} catch (ender:Ender) {
+		} catch (ender:JangEnders) {
 			throw ender;
-		} catch (err) {
-			var msg:String = err.details();
-			new JangError(this.source, if (e == null) 1 else e.posStart, if (e == null) 1 else e.posEnd, if (e == null) 1 else e.line, msg,
+		} catch (err:String) {
+			new JangError(this.source, if (e == null) 1 else e.posStart, if (e == null) 1 else e.posEnd, if (e == null) 1 else e.line, err,
 				JangErrorType.RUNTIME_ERROR, "main.jn", null);
 		}
 
@@ -434,15 +500,16 @@ class Interpreter {
 		for (expr in body) {
 			try {
 				executeExpr(expr, local);
-			} catch (e:Ender) {
+			} catch (e:JangEnders) {
 				switch (e) {
 					case Return(ret):
-						var value:JangValue = executeExpr(ret, local);
-						if (TypeUtils.checkType(value, type)) {
-							return value;
+						if (TypeUtils.checkType(ret, type)) {
+							return ret;
 						} else {
-							throw 'Expected ' + TypeUtils.getTypeName(type) + ', not ' + (value == null ? "null" : TypeUtils.getValueName(value));
+							throw 'Expected ' + TypeUtils.getTypeName(type) + ', not ' + (ret == null ? "null" : TypeUtils.getValueName(ret));
 						}
+					case Throw(v, info):
+						throw e;
 					default:
 						throw 'Unexpected ender ' + Std.string(e);
 				}
@@ -465,6 +532,15 @@ enum JangValue {
 	VInstance(i:JangInstance);
 	VFunction(f:JangFunction);
 	VHaxeFunction(f:(args:Array<JangValue>) -> JangValue);
+	VHaxeClass(c:Class<Dynamic>);
+	VHaxeObject(obj:Dynamic);
+}
+
+enum JangEnders {
+	Return(v:JangValue);
+	Break;
+	Continue;
+	Throw(v:JangValue, info:ExprInfo);
 }
 
 typedef JangFunction = {

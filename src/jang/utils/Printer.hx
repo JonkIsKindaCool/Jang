@@ -16,7 +16,14 @@ class Printer {
 
 	public static function printExpr(e:ExprInfo, ?spaces:Int = 0) {
 		printWithSpaces('{', spaces);
+		printWithSpaces('Start: ${e.posStart}', spaces + 4);
+		printWithSpaces('End: ${e.posEnd}', spaces + 4);
+		printWithSpaces('Line: ${e.line}', spaces + 4);
 		switch (e.expr) {
+			case Try(body, catchContent):
+				printWithSpaces('Type: Try Statement', spaces + 4);
+				for (expr in body)
+					printExpr(expr, spaces + 8);
 			case NumberLiteral(value):
 				printWithSpaces('Type: Number Literal', spaces + 4);
 				printWithSpaces('Value: $value', spaces + 4);
@@ -29,6 +36,7 @@ class Printer {
 				printWithSpaces('Type: Identifier', spaces + 4);
 				printWithSpaces('Name: $name', spaces + 4);
 			case Block(statements):
+				printWithSpaces('Type: Block', spaces + 4);
 				for (expr in statements)
 					printExpr(expr, spaces + 4);
 			case BinaryOp(left, op, right):
@@ -42,7 +50,7 @@ class Printer {
 				printWithSpaces('Type: Assignment', spaces + 4);
 				printWithSpaces('name: $name', spaces + 4);
 				printWithSpaces('isConstant: $isConstant', spaces + 4);
-				printWithSpaces('type: ${type.getName()}', spaces + 4);
+				printWithSpaces('type: ${TypeUtils.getTypeName(type)}', spaces + 4);
 				printWithSpaces('Value: ', spaces + 4);
 				printExpr(right, spaces + 8);
 			case StringLiteral(value):
@@ -78,6 +86,17 @@ class Printer {
 				for (arg in args) {
 					printExpr(arg, spaces + 8);
 				}
+			case For(v, iterator, body):
+				printWithSpaces('Type: For Loop', spaces + 4);
+				printWithSpaces('Variables: $v', spaces + 4);
+				printWithSpaces('Iterator:', spaces + 4);
+				printExpr(iterator, spaces + 8);
+				if (body.length > 0) {
+					printWithSpaces('Body: ', spaces + 4);
+					for (expr in body) {
+						printExpr(expr, spaces + 8);
+					}
+				}
 			case Ender(e):
 				switch (e) {
 					case Return(e):
@@ -88,8 +107,28 @@ class Printer {
 						printWithSpaces('Type: Break', spaces + 4);
 					case Continue:
 						printWithSpaces('Type: Continue', spaces + 4);
+					case Throw(e):
+						printWithSpaces('Type: Throw', spaces + 4);
+						printWithSpaces('Expression:', spaces + 4);
+						printExpr(e, spaces + 8);
 				}
-			case Function(expr, args, type, name):
+			case Function(body, args, type, name):
+				printWithSpaces('Type: Function', spaces + 4);
+				if (name != null) {
+					printWithSpaces('Name: $name', spaces + 4);
+				}
+				printWithSpaces('Function Type: ${TypeUtils.getTypeName(type)}', spaces + 4);
+				if (args.length > 0) {
+					printWithSpaces('Arguments:', spaces + 4);
+					for (arg in args)
+						printWithSpaces('Argument ${arg.name}, Type: ${TypeUtils.getTypeName(arg.type)}', spaces + 8);
+				}
+				if (body.length > 0) {
+					printWithSpaces('Body:', spaces + 4);
+					for (expr in body)
+						printExpr(expr, spaces + 8);
+				}
+
 			case If(cond, body, elsE):
 				printWithSpaces('Type: If Statement', spaces + 4);
 				printWithSpaces('Condition:', spaces + 4);
@@ -127,7 +166,7 @@ class Printer {
 					printWithSpaces('Name: ${v.name}', spaces + 8);
 					printWithSpaces('Behaviour: ${v.behaviour}', spaces + 8);
 					printWithSpaces('Constant: ${v.constant}', spaces + 8);
-					printWithSpaces('Type: ${v.type}', spaces + 8);
+					printWithSpaces('Type: ${TypeUtils.getTypeName(v.type)}', spaces + 8);
 					printWithSpaces('Value:', spaces + 8);
 					if (v.value != null) {
 						printExpr(v.value, spaces + 12);
