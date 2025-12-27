@@ -1,5 +1,7 @@
 package jang.runtime;
 
+import haxe.Exception;
+import jang.Jang.JangImportVariable;
 import jang.Jang.JangOutput;
 import jang.errors.JangError;
 import jang.runtime.Scope;
@@ -80,10 +82,14 @@ class Interpreter {
 	];
 
 	public var scope:Scope;
+	public var directory:String = null;
+	public var fileName:String = "main.jn";
 	public var source:String = "";
 
-	public function new() {
+	public function new(directory:String = "", fileName:String = "main.jn") {
 		scope = new Scope(this, Jang.GLOBALS);
+		this.directory = directory;
+		this.fileName = fileName;
 	}
 
 	public function execute(e:ExprInfo, ?src:String):JangValue {
@@ -97,7 +103,7 @@ class Interpreter {
 				case Return(e):
 					return e;
 				case Throw(e, info):
-					new JangError(src, info.posStart, info.posEnd, info.line, Std.string(TypeUtils.jangToHaxe(e)), RUNTIME_ERROR);
+					new JangError(src, info.posStart, info.posEnd, info.line, Std.string(TypeUtils.jangToHaxe(e)), RUNTIME_ERROR, fileName);
 					return VNull;
 				default:
 					throw 'Unexpected Ender $e';
@@ -244,25 +250,9 @@ class Interpreter {
 					scope.define(name, executeExpr(right, scope), isConstant, type);
 					return VNull;
 				case Import(path, targets):
-					var isHaxeClassAdded:Bool = false;
-					if (Jang.allowHaxeImports) {
-						for (i in targets) {
-							var c:Class<Dynamic> = std.Type.resolveClass('$path${(path != "" ? "." : "")}$i');
-							if (c != null) {
-								scope.define(i, VHaxeClass(c), true, TCustom(i));
-								isHaxeClassAdded = true;
-							}
-						}
-					}
-
-					if (isHaxeClassAdded)
-						return VNull;
-
-					var output:JangOutput = Jang.resolveScript(path);
-					var interp:Interpreter = output.interp;
-
-					for (t in targets) {
-						scope.variables.set(t, interp.scope.variables.get(t));
+					for (target in targets){
+						var value:JangVariable = Jang.getImportVariable(path, target);
+						scope.define(target, value.value, value.constant, value.type);
 					}
 					return VNull;
 				case Call(f, args):
@@ -469,8 +459,8 @@ class Interpreter {
 			}
 		} catch (ender:JangEnders) {
 			throw ender;
-		} catch (err:String) {
-			new JangError(this.source, if (e == null) 1 else e.posStart, if (e == null) 1 else e.posEnd, if (e == null) 1 else e.line, err,
+		} catch (err:Exception) {
+			new JangError(this.source, if (e == null) 1 else e.posStart, if (e == null) 1 else e.posEnd, if (e == null) 1 else e.line, err.details(),
 				JangErrorType.RUNTIME_ERROR, "main.jn", null);
 		}
 

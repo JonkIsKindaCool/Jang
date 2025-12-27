@@ -15,10 +15,8 @@ function main() {
 
 	Jang.allowHaxeImports = true;
 
-	var output:JangOutput = Jang.resolveScript("main");
-
-	var interpreter:Interpreter = output.interp;
-	var result:JangValue = output.result;
+	var interp:Interpreter = new Interpreter();
+	var result = interp.execute(new Parser().parseString(sys.io.File.getContent("main.jn")), sys.io.File.getContent("main.jn"));
 
 	Printer.println('Execution Time: ${(Timer.stamp() - t0) * 1000.0} ms');
 	Printer.println('Result: $result');

@@ -20,57 +20,73 @@ using StringTools;
 
 class Jang {
 	public static var allowHaxeImports:Bool = false;
+
+	public static final Script_Paths:Map<String, Map<String, JangVariable>> = [
+		"std" => [
+			"IO" => {
+					value: VClass(new IO()),
+					constant: true,
+					type: TCustom("IO")
+				},
+			"Math" => {
+					value: VClass(new Math()),
+					constant: true,
+					type: TCustom("Math")
+				}
+		]
+	];
+
+	public static final ALIVE_INTERPRETERS:Map<String, Interpreter> = [];
+
 	public static final GLOBALS:Scope = {
 		var scope:Scope = new Scope(null, null);
-		scope.define("IO", VClass(new IO()), true, TCustom("IO"));
-		scope.define("Math", VClass(new Math()), true, TCustom("Math"));
-		scope.define("StringBuffer", VClass(new StringBuffer()), true, TCustom("StringBuffer"));
-		scope.define("Time", VClass(new Time()), true, TCustom("Time"));
 		scope.define("String", VClass(new StringClass()), true, TCustom("String"));
 		scope.define("Int", VClass(new IntClass()), true, TCustom("Int"));
 		scope.define("Object", VClass(new ObjectClass()), true, TCustom("Object"));
 		scope.define("Array", VClass(new ArrayClass()), true, TCustom("Array"));
-		scope.define("print", IO.instance.getVariable('println'), true, TFunction);
 		scope;
 	}
 
-	public static var alivesInterpreters:Map<String, JangOutput> = new Map();
+	public static function getImportVariable(path:String, value:String): JangVariable {
+		if (!Script_Paths.exists(path)){
+			Script_Paths.set(path, []);
+			var content:String = getFile(path.replace(".", "/") + ".jn");
 
-	public static dynamic function resolveScript(path:String):JangOutput {
-		if (alivesInterpreters.exists(path))
-			return alivesInterpreters.get(path);
+			if (content == null){
+				return null;
+			}
 
-		path = path.replace('.', '/') + '.jn';
+			var ast:ExprInfo = new Parser().parseString(content);
 
-		var content:String = null;
+			var interp:Interpreter =  new Interpreter(Path.directory(path), (Path.withoutDirectory(path)));
+			interp.execute(ast, content);
+			ALIVE_INTERPRETERS.set(path, interp);
+		}
 
-		#if sys
-		if (!sys.FileSystem.exists(path))
-			throw 'Script $path doesnt exists';
+		var variables: Map<String, JangVariable> = Script_Paths.get(path);
 
-		content = sys.io.File.getContent(path);
-		#else
-		if (!Resource.listNames().contains(path))
-			throw 'Script $path doesnt exists';
+		if (!variables.exists(value)){
+			var interp:Interpreter = ALIVE_INTERPRETERS.get(path);
+			variables.set(value, interp.scope.variables.get(value));
+		}
 
-		content = Resource.getString(path);
-		#end
+		var val:JangVariable = variables.get(value);
 
-		var parser:Parser = new Parser();
-		var ast:ExprInfo = parser.parseString(content);
-
-		#if JANG_DEVELOPING
-		Printer.printExpr(ast);
-		#end
-
-		var interp:Interpreter = new Interpreter();
-		var result:JangOutput = {
-			result: interp.execute(ast, content),
-			interp: interp
-		};
-		alivesInterpreters.set(path, result);
-		return result;
+		return val;
 	}
+
+	private static function getFile(f:String): String {
+		#if sys
+		return sys.io.File.getContent(f);
+		#end
+
+		return Resource.getString(f);
+	}
+}
+
+typedef JangImportVariable = {
+	name:String,
+	value: JangVariable
 }
 
 typedef JangOutput = {
